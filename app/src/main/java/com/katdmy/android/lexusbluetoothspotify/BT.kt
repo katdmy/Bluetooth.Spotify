@@ -1,6 +1,5 @@
 package com.katdmy.android.lexusbluetoothspotify
 
-import android.app.Application
 import android.bluetooth.*
 import android.content.Context
 
