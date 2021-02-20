@@ -37,5 +37,4 @@ class BT(private val context: Context) {
         }
     }
 
-
 }

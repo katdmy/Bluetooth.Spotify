@@ -1,18 +1,27 @@
 package com.katdmy.android.lexusbluetoothspotify
 
+import android.Manifest
 import android.app.NotificationChannel
 import android.app.NotificationManager
+import android.bluetooth.*
 import android.content.*
 import android.content.ComponentName
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.provider.Settings
 import android.text.TextUtils
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Button
 import android.widget.TextView
+import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat
+import java.io.IOException
+import java.util.*
 
 
 class MainActivity : AppCompatActivity(){
@@ -30,6 +39,8 @@ class MainActivity : AppCompatActivity(){
     private val default_notification_channel_id = "default"
     private val notificationBroadcastReceiver = NotificationBroadcastReceiver {
             text -> tv?.append("$text \n\n") }
+    private val PERMISSION_CODE = 654
+    private val REQUEST_ENABLE_BT = 655
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -45,7 +56,7 @@ class MainActivity : AppCompatActivity(){
             )) {
             val intentFilter = IntentFilter().apply { addAction("com.katdmy.android.lexusbluetoothspotify") }
             registerReceiver(notificationBroadcastReceiver, intentFilter)
-            Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
+//            Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
         } else
             applicationContext.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
 
@@ -124,8 +135,96 @@ class MainActivity : AppCompatActivity(){
             mNotificationManager.notify(System.currentTimeMillis().toInt(), mBuilder.build())
         }
 
-        connectBt?.setOnClickListener {  }
+        connectBt?.setOnClickListener {
+            if (ContextCompat.checkSelfPermission(baseContext,
+                    Manifest.permission.ACCESS_BACKGROUND_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(
+                    this,
+                    arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
+                    PERMISSION_CODE)
+            }
+
+            val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
+            if (bluetoothAdapter == null) {
+                Toast.makeText(this, "Device doesn't support Bluetooth", Toast.LENGTH_LONG).show()
+                return@setOnClickListener
+            }
+
+            if (!bluetoothAdapter?.isEnabled) {
+                val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+                startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
+            }
+
+            tv?.text = ""
+            var btaBluetoothDevice : BluetoothDevice? = null
+            val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter.bondedDevices
+            pairedDevices?.forEach { device ->
+                if (device.name == "BTA") {
+                    btaBluetoothDevice = device // BTA bluetooth device
+                }
+            }
+            if (btaBluetoothDevice != null) {
+                tv?.append("BTA address: ${btaBluetoothDevice!!.address}\n")
+                btaBluetoothDevice!!.uuids.forEach { parcelUuid ->
+                    run {
+                        val btSocket: BluetoothSocket =
+                            btaBluetoothDevice!!.createRfcommSocketToServiceRecord(parcelUuid.uuid)
+
+                        try {
+                            btSocket.connect()
+                        } catch (e: IOException) {
+                            btSocket.close()
+                            tv?.append("uuid: ${parcelUuid.uuid} not connected with error :$e")
+                        } finally {
+                            tv?.append("uuid: ${parcelUuid.uuid}\n connected!")
+                        }
+
+                    }
+                }
+
+            } else {} // BTA is not paired
+
+
+            /*var bluetoothHeadset: BluetoothHeadset? = null
+            val profileListener = object : BluetoothProfile.ServiceListener {
+                override fun onServiceConnected(profile: Int, proxy: BluetoothProfile) {
+                    if (profile == BluetoothProfile.HEADSET) {
+                        bluetoothHeadset = proxy as BluetoothHeadset
+                    }
+                }
+                override fun onServiceDisconnected(profile: Int) {
+                    if (profile == BluetoothProfile.HEADSET) {
+                        bluetoothHeadset = null
+                    }
+                }
+            }
+            bluetoothAdapter?.getProfileProxy(applicationContext, profileListener, BluetoothProfile.HEADSET)    // Establish connection to the proxy.
+
+// ... call functions on bluetoothHeadset
+            //bluetoothHeadset.
+
+            bluetoothAdapter?.closeProfileProxy(BluetoothProfile.HEADSET, bluetoothHeadset) // Close proxy connection after use. */
+        }
     }
+
+    /*override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        when (requestCode) {
+            REQUEST_ENABLE_BT -> {
+                if (resultCode == RESULT_OK) {
+                    tv?.text = ""
+                    val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter?.bondedDevices
+                    pairedDevices?.forEach { device ->
+                        val deviceName = device.name
+                        val deviceHardwareAddress = device.address // MAC address
+                        tv?.append("name: $deviceName, address: $deviceHardwareAddress")
+                    }
+                } else return
+            }
+            else -> return
+        }
+    }*/
 
     private fun isNotificationServiceEnabled(): Boolean {
         val pkgName = packageName
