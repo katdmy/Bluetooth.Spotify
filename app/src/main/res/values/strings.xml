@@ -16,5 +16,6 @@
     <string name="stop_service">Stop service</string>
     <string name="start_service">Start service</string>
     <string name="clear_view">Clear view</string>
-    <string name="connect_bluetooth_device">Connect bluetooth device</string>
+    <string name="connect_bta">Connect BTA</string>
+    <string name="open_music">Open music app</string>
 </resources>
