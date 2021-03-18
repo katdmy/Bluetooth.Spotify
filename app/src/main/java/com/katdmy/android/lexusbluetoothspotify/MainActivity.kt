@@ -13,6 +13,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.speech.tts.TextToSpeech
 import android.text.TextUtils
 import android.util.Log
 import android.view.Menu
@@ -44,12 +45,17 @@ class MainActivity : AppCompatActivity(){
     private val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
     val NOTIFICATION_CHANNEL_ID = "10001"
     private val default_notification_channel_id = "default"
-    private val notificationBroadcastReceiver = NotificationBroadcastReceiver {
-        text -> tv?.append("$text \n\n") }
+    private val notificationBroadcastReceiver = NotificationBroadcastReceiver { header, text ->
+        run {
+            tv?.append("$header\n$text \n\n")
+            val ttsReturn = tts.speak(text, TextToSpeech.QUEUE_ADD, null, text)
+        }
+    }
     private val btBroadcastReceiver = BtBroadcastReceiver {
         data -> btStatusTv?.text = data }
     private val PERMISSION_CODE = 654
     private val REQUEST_ENABLE_BT = 655
+    private lateinit var tts: TextToSpeech
     private val scope = CoroutineScope(Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -58,28 +64,11 @@ class MainActivity : AppCompatActivity(){
 
         initViews()
         setUpClickListeners()
+        registerReceivers()
 
         serviceStatusTv?.text = getString(R.string.service_status, if (isNotificationServiceEnabled()) "running" else "stopped")
-
-        if (Settings.Secure.getString(this.contentResolver, "enabled_notification_listeners").contains(
-                        applicationContext.packageName
-                )) {
-            val notificationsIntentFilter = IntentFilter().apply {
-                addAction("com.katdmy.android.lexusbluetoothspotify")
-            }
-            registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter)
-
-            val btStatusIntentFilter = IntentFilter().apply {
-                addAction("android.bluetooth.device.action.ACL_CONNECTED")
-                addAction("android.bluetooth.device.action.ACL_DISCONNECT_REQUESTED")
-                addAction("android.bluetooth.device.action.ACL_DISCONNECTED")
-            }
-            registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
-
-            Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
-        } else
-            startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
     }
+
 
     override fun onCreateOptionsMenu(menu: Menu?): Boolean {
         menuInflater.inflate(R.menu.menu_main, menu)  // Menu Resource, Menu
@@ -184,6 +173,30 @@ class MainActivity : AppCompatActivity(){
             else -> return
         }
     }*/
+
+
+    private fun registerReceivers() {
+        if (Settings.Secure.getString(this.contentResolver, "enabled_notification_listeners").contains(
+                        applicationContext.packageName
+                )) {
+            val notificationsIntentFilter = IntentFilter().apply {
+                addAction("com.katdmy.android.lexusbluetoothspotify")
+            }
+            tts = TextToSpeech(this) {
+                registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter)
+            }
+
+            val btStatusIntentFilter = IntentFilter().apply {
+                addAction("android.bluetooth.device.action.ACL_CONNECTED")
+                addAction("android.bluetooth.device.action.ACL_DISCONNECT_REQUESTED")
+                addAction("android.bluetooth.device.action.ACL_DISCONNECTED")
+            }
+            registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
+
+            Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
+        } else
+            startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+    }
 
     private fun isNotificationServiceEnabled(): Boolean {
         val pkgName = packageName

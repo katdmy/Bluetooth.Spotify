@@ -14,16 +14,22 @@ import kotlinx.coroutines.*
 import java.io.IOException
 import java.util.*
 
-class NotificationBroadcastReceiver(private val showNotificationData: (String) -> Unit) : BroadcastReceiver() {
+class NotificationBroadcastReceiver(private val showNotificationData: (String, String) -> Unit) : BroadcastReceiver() {
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
     override fun onReceive(context: Context?, intent: Intent?) {
-        showNotificationData(intent?.getStringExtra("SBN") ?: "")
+        val packageName = intent?.getStringExtra("Package Name") ?: ""
+        val key = intent?.getStringExtra("Key") ?: ""
+        val title = intent?.getStringExtra("Title") ?: ""
+        val text = intent?.getStringExtra("Text") ?: ""
 
-        if (intent?.getStringExtra("Package Name")?.equals("ru.alarmtrade.connect") == true
-                && intent.getStringExtra("Key")?.equals("0|ru.alarmtrade.connect|1076889714|null|10269") == true)
-                    connectBta(context)
+        if ((key.contains("0|com.whatsapp|1") && !key.contains("0|com.whatsapp|1|null"))
+                || packageName=="org.telegram.messenger")
+            showNotificationData("$packageName [$key]", "$title - $text")
+
+        if (packageName == "ru.alarmtrade.connect" && key == "0|ru.alarmtrade.connect|1076889714|null|10269")
+            connectBta(context)
     }
 
 
@@ -48,7 +54,6 @@ class NotificationBroadcastReceiver(private val showNotificationData: (String) -
         }
         if (btaBluetoothDevice != null) {
             bluetoothAdapter.cancelDiscovery()
-
 
             scope.launch {
                 var isConnected = false
@@ -95,4 +100,6 @@ class NotificationBroadcastReceiver(private val showNotificationData: (String) -
             Toast.makeText(context, "Music player is not instaled, can't autostart it.", Toast.LENGTH_LONG).show()
         }
     }
+
+
 }
