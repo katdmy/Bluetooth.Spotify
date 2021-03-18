@@ -50,6 +50,7 @@ class MainActivity : AppCompatActivity(){
         data -> btStatusTv?.text = data }
     private val PERMISSION_CODE = 654
     private val REQUEST_ENABLE_BT = 655
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -237,33 +238,38 @@ class MainActivity : AppCompatActivity(){
             tv?.append("BTA address: ${btaBluetoothDevice!!.address}\n")
             bluetoothAdapter.cancelDiscovery()
 
-            GlobalScope.launch {
-                withContext(Dispatchers.IO) {
-                    val btSocket: BluetoothSocket =
-                            btaBluetoothDevice!!.createRfcommSocketToServiceRecord(UUID.fromString(BtNames.BT_DEVICE_UUID))
+            scope.launch {
+                var isConnected = false
+                var connectionAttempts = 0
 
-                    var isConnected = false
-                    var connectionAttempts = 0
-                    while (!isConnected && connectionAttempts < 20) {
-                        connectionAttempts += 1
-                        try {
-                            btSocket.connect()
-                            runOnUiThread { tv?.append("\nBTA is connected!") }
-                            delay(1_000L)
-                            btSocket.close()
-                            isConnected = true
-
-                            openMusic()
-                        } catch (e: IOException) {
-                            runOnUiThread { tv?.append("\nBTA is not connected.") }
-                            btSocket.close()
-                        }
-                    }
+                while (!isConnected && connectionAttempts < 20) {
+                    connectionAttempts += 1
+                    isConnected = connectBtaAttempt(btaBluetoothDevice!!)
                 }
             }
 
         } else {
             tv?.append("BTA is not paired")
+        }
+    }
+
+    @Suppress("BlockingMethodInNonBlockingContext")
+    private suspend fun connectBtaAttempt(btaBluetoothDevice: BluetoothDevice) : Boolean {
+        val btSocket: BluetoothSocket =
+                btaBluetoothDevice.createRfcommSocketToServiceRecord(UUID.fromString(BtNames.BT_DEVICE_UUID))
+
+        return try {
+            btSocket.connect()
+            withContext(Dispatchers.Main) { tv?.append("\nBTA is connected!") }
+            delay(1_000L)
+            btSocket.close()
+
+            openMusic()
+            true
+        } catch (e: IOException) {
+            withContext(Dispatchers.Main) { tv?.append("\nBTA is not connected.") }
+            btSocket.close()
+            false
         }
     }
 

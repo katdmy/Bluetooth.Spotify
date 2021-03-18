@@ -26,7 +26,7 @@
             android:name=".NotificationListener"
             android:label="@string/service_name"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE"
-             >
+            android:exported="false" >
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>

@@ -15,6 +15,9 @@ import java.io.IOException
 import java.util.*
 
 class NotificationBroadcastReceiver(private val showNotificationData: (String) -> Unit) : BroadcastReceiver() {
+
+    private val scope = CoroutineScope(Dispatchers.IO)
+
     override fun onReceive(context: Context?, intent: Intent?) {
         showNotificationData(intent?.getStringExtra("SBN") ?: "")
 
@@ -46,29 +49,35 @@ class NotificationBroadcastReceiver(private val showNotificationData: (String) -
         if (btaBluetoothDevice != null) {
             bluetoothAdapter.cancelDiscovery()
 
-            GlobalScope.launch {
-                withContext(Dispatchers.IO) {
-                    val btSocket: BluetoothSocket =
-                            btaBluetoothDevice!!.createRfcommSocketToServiceRecord(UUID.fromString(BtNames.BT_DEVICE_UUID))
 
-                    var isConnected = false
-                    var connectionAttempts = 0
-                    while (!isConnected && connectionAttempts < 20) {
-                        connectionAttempts += 1
-                        try {
-                            btSocket.connect()
-                            delay(1_000L)
-                            btSocket.close()
-                            isConnected = true
+            scope.launch {
+                var isConnected = false
+                var connectionAttempts = 0
 
-                            openMusic(context)
-                        } catch (e: IOException) {
-                            btSocket.close()
-                        }
-                    }
+                while (!isConnected && connectionAttempts < 20) {
+                    connectionAttempts += 1
+                    isConnected = connectBtaAttempt(btaBluetoothDevice!!, context)
                 }
             }
+        }
+    }
 
+
+    @Suppress("BlockingMethodInNonBlockingContext")
+    private suspend fun connectBtaAttempt(btaBluetoothDevice: BluetoothDevice, context: Context?) : Boolean {
+        val btSocket: BluetoothSocket =
+                btaBluetoothDevice.createRfcommSocketToServiceRecord(UUID.fromString(BtNames.BT_DEVICE_UUID))
+
+        return try {
+            btSocket.connect()
+            delay(1_000L)
+            btSocket.close()
+
+            openMusic(context)
+            true
+        } catch (e: IOException) {
+            btSocket.close()
+            false
         }
     }
 
