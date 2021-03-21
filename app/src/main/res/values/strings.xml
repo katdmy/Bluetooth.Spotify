@@ -18,4 +18,6 @@
     <string name="clear_view">Clear view</string>
     <string name="connect_bta">Connect BTA</string>
     <string name="open_music">Open music app</string>
+    <string name="notification_title">Notification Reader</string>
+    <string name="notification_message">Service reading messages and connecting to BTA</string>
 </resources>

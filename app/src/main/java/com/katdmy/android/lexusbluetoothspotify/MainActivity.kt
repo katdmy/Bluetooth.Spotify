@@ -1,21 +1,19 @@
 package com.katdmy.android.lexusbluetoothspotify
 
 import android.Manifest
-import android.app.NotificationChannel
-import android.app.NotificationManager
-import android.bluetooth.*
-import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothAdapter.ACTION_DISCOVERY_FINISHED
-import android.content.*
+import android.bluetooth.BluetoothDevice
+import android.bluetooth.BluetoothSocket
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
+import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.speech.tts.TextToSpeech
 import android.text.TextUtils
-import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Button
@@ -23,7 +21,7 @@ import android.widget.TextView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
-import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.*
 import java.io.IOException
@@ -43,19 +41,10 @@ class MainActivity : AppCompatActivity(){
     private var openMusicBtn: Button? = null
 
     private val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
-    val NOTIFICATION_CHANNEL_ID = "10001"
-    private val default_notification_channel_id = "default"
-    private val notificationBroadcastReceiver = NotificationBroadcastReceiver { header, text ->
-        run {
-            tv?.append("$header\n$text \n\n")
-            val ttsReturn = tts.speak(text, TextToSpeech.QUEUE_ADD, null, text)
-        }
-    }
-    private val btBroadcastReceiver = BtBroadcastReceiver {
-        data -> btStatusTv?.text = data }
+    private val notificationBroadcastReceiver = NotificationBroadcastReceiver { text -> tv?.append(text) }
+    private val btBroadcastReceiver = BtBroadcastReceiver { data -> btStatusTv?.text = data }
     private val PERMISSION_CODE = 654
     private val REQUEST_ENABLE_BT = 655
-    private lateinit var tts: TextToSpeech
     private val scope = CoroutineScope(Dispatchers.IO)
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -66,7 +55,8 @@ class MainActivity : AppCompatActivity(){
         setUpClickListeners()
         registerReceivers()
 
-        serviceStatusTv?.text = getString(R.string.service_status, if (isNotificationServiceEnabled()) "running" else "stopped")
+        //serviceStatusTv?.text = getString(R.string.service_status, if (isNotificationServiceEnabled()) "running" else "stopped")
+        serviceStatusTv?.text = getString(R.string.service_status, if (isNotificationListenerServiceEnabled(this)) "running" else "stopped")
     }
 
 
@@ -118,6 +108,7 @@ class MainActivity : AppCompatActivity(){
         stopBtn?.setOnClickListener {
             Intent(this, NotificationListener::class.java).also { intent -> stopService(intent) }
             serviceStatusTv?.text = getString(R.string.service_status, if (isNotificationServiceEnabled()) "running" else "stopped")
+            //stopForeground(ForegroundNotificationListener(), 0)
         }
 
         startBtn?.setOnClickListener {
@@ -127,7 +118,7 @@ class MainActivity : AppCompatActivity(){
 
         clearBtn?.setOnClickListener { tv?.text = "" }
 
-        createNotificationBtn?.setOnClickListener {
+        /*createNotificationBtn?.setOnClickListener {
             val mNotificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
             val mBuilder =
                     NotificationCompat.Builder(this@MainActivity, default_notification_channel_id)
@@ -145,7 +136,7 @@ class MainActivity : AppCompatActivity(){
             mBuilder.setChannelId(NOTIFICATION_CHANNEL_ID)
             mNotificationManager.createNotificationChannel(notificationChannel)
             mNotificationManager.notify(System.currentTimeMillis().toInt(), mBuilder.build())
-        }
+        }*/
 
         connectBtaBtn?.setOnClickListener {
             connectBta()
@@ -156,25 +147,6 @@ class MainActivity : AppCompatActivity(){
         }
     }
 
-    /*override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
-        super.onActivityResult(requestCode, resultCode, data)
-        when (requestCode) {
-            REQUEST_ENABLE_BT -> {
-                if (resultCode == RESULT_OK) {
-                    tv?.text = ""
-                    val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter?.bondedDevices
-                    pairedDevices?.forEach { device ->
-                        val deviceName = device.name
-                        val deviceHardwareAddress = device.address // MAC address
-                        tv?.append("name: $deviceName, address: $deviceHardwareAddress")
-                    }
-                } else return
-            }
-            else -> return
-        }
-    }*/
-
-
     private fun registerReceivers() {
         if (Settings.Secure.getString(this.contentResolver, "enabled_notification_listeners").contains(
                         applicationContext.packageName
@@ -182,9 +154,7 @@ class MainActivity : AppCompatActivity(){
             val notificationsIntentFilter = IntentFilter().apply {
                 addAction("com.katdmy.android.lexusbluetoothspotify")
             }
-            tts = TextToSpeech(this) {
-                registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter)
-            }
+            registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter)
 
             val btStatusIntentFilter = IntentFilter().apply {
                 addAction("android.bluetooth.device.action.ACL_CONNECTED")
@@ -193,7 +163,7 @@ class MainActivity : AppCompatActivity(){
             }
             registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
 
-            Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
+            //Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
         } else
             startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
     }
@@ -216,6 +186,11 @@ class MainActivity : AppCompatActivity(){
             }
         }
         return false
+    }
+
+    private fun isNotificationListenerServiceEnabled(context: Context): Boolean {
+        val packageNames = NotificationManagerCompat.getEnabledListenerPackages(context)
+        return packageNames.contains(context.packageName)
     }
 
     private fun connectBta() {

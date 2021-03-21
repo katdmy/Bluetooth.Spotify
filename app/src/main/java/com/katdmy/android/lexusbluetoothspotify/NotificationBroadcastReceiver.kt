@@ -9,12 +9,11 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.util.Log
-import android.widget.Toast
 import kotlinx.coroutines.*
 import java.io.IOException
 import java.util.*
 
-class NotificationBroadcastReceiver(private val showNotificationData: (String, String) -> Unit) : BroadcastReceiver() {
+class NotificationBroadcastReceiver(private val showNotificationData: (String) -> Unit) : BroadcastReceiver() {
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -24,24 +23,24 @@ class NotificationBroadcastReceiver(private val showNotificationData: (String, S
         val title = intent?.getStringExtra("Title") ?: ""
         val text = intent?.getStringExtra("Text") ?: ""
 
-        if ((key.contains("0|com.whatsapp|1") && !key.contains("0|com.whatsapp|1|null"))
-                || packageName=="org.telegram.messenger")
-            showNotificationData("$packageName [$key]", "$title - $text")
+        if (packageName == "ru.alarmtrade.connect") {
+            showNotificationData("$packageName\n$key\n$title\n$text")
+            if (key == "0|ru.alarmtrade.connect|1076889714|null|10269")
+                connectBta(context)
+        }
 
-        if (packageName == "ru.alarmtrade.connect" && key == "0|ru.alarmtrade.connect|1076889714|null|10269")
-            connectBta(context)
     }
 
 
     private fun connectBta(context: Context?) {
         val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         if (bluetoothAdapter == null) {
-            Toast.makeText(context, "Device doesn't support Bluetooth", Toast.LENGTH_LONG).show()
+            showNotificationData("Device doesn't support Bluetooth")
             return
         }
 
         if (!bluetoothAdapter.isEnabled) {
-            Toast.makeText(context, "Please turn Bluetooth on", Toast.LENGTH_LONG).show()
+            showNotificationData("Please turn Bluetooth on")
             return
         }
 
@@ -54,6 +53,8 @@ class NotificationBroadcastReceiver(private val showNotificationData: (String, S
         }
         if (btaBluetoothDevice != null) {
             bluetoothAdapter.cancelDiscovery()
+
+            showNotificationData("Start BTA connecting")
 
             scope.launch {
                 var isConnected = false
@@ -77,11 +78,13 @@ class NotificationBroadcastReceiver(private val showNotificationData: (String, S
             btSocket.connect()
             delay(1_000L)
             btSocket.close()
+            showNotificationData("Successful connected!")
 
             openMusic(context)
             true
         } catch (e: IOException) {
             btSocket.close()
+            showNotificationData("Error connecting attempt")
             false
         }
     }
@@ -97,7 +100,7 @@ class NotificationBroadcastReceiver(private val showNotificationData: (String, S
             context?.startActivity(intent)
         } catch (e: ActivityNotFoundException) {
             Log.e(context?.javaClass?.simpleName, "Music player is not instaled, can't autostart it.")
-            Toast.makeText(context, "Music player is not instaled, can't autostart it.", Toast.LENGTH_LONG).show()
+            showNotificationData("Music player is not instaled, can't autostart it.")
         }
     }
 
