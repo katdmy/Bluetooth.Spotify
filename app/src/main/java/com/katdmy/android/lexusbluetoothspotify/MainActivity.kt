@@ -4,16 +4,11 @@ import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothSocket
-import android.content.ActivityNotFoundException
-import android.content.ComponentName
-import android.content.Context
-import android.content.Intent
-import android.content.IntentFilter
+import android.content.*
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
-import android.text.TextUtils
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Button
@@ -23,16 +18,18 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.app.ActivityCompat
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
+import androidx.preference.PreferenceManager
+import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.*
 import java.io.IOException
 import java.util.*
 
 
-class MainActivity : AppCompatActivity(){
+class MainActivity : AppCompatActivity() {
 
     private var stopBtn: Button? = null
     private var startBtn: Button? = null
-    private var serviceStatusTv: TextView? = null
+    private var voiceSwitch: SwitchMaterial? = null
     private var btStatusTv: TextView? = null
     private var clearBtn: Button? = null
     private var createNotificationBtn: Button? = null
@@ -46,6 +43,7 @@ class MainActivity : AppCompatActivity(){
     private val PERMISSION_CODE = 654
     private val REQUEST_ENABLE_BT = 655
     private val scope = CoroutineScope(Dispatchers.IO)
+    private lateinit var sharedPreferences: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,8 +53,9 @@ class MainActivity : AppCompatActivity(){
         setUpClickListeners()
         registerReceivers()
 
-        //serviceStatusTv?.text = getString(R.string.service_status, if (isNotificationServiceEnabled()) "running" else "stopped")
-        serviceStatusTv?.text = getString(R.string.service_status, if (isNotificationListenerServiceEnabled(this)) "running" else "stopped")
+        sharedPreferences =
+              getSharedPreferences("sharedPreferences", Context.MODE_PRIVATE)
+            //PreferenceManager.getDefaultSharedPreferences(applicationContext)
     }
 
 
@@ -81,7 +80,7 @@ class MainActivity : AppCompatActivity(){
         unregisterReceiver(notificationBroadcastReceiver)
         stopBtn = null
         startBtn = null
-        serviceStatusTv = null
+        voiceSwitch = null
         btStatusTv = null
         clearBtn = null
         createNotificationBtn = null
@@ -94,7 +93,7 @@ class MainActivity : AppCompatActivity(){
     private fun initViews() {
         stopBtn = findViewById(R.id.stop_btn)
         startBtn = findViewById(R.id.start_btn)
-        serviceStatusTv = findViewById(R.id.service_status_tv)
+        voiceSwitch = findViewById(R.id.voice_sw)
         btStatusTv = findViewById(R.id.bt_status_tv)
         clearBtn = findViewById(R.id.clear_btn)
         createNotificationBtn = findViewById(R.id.create_notification_btn)
@@ -106,14 +105,22 @@ class MainActivity : AppCompatActivity(){
     private fun setUpClickListeners() {
 
         stopBtn?.setOnClickListener {
-            Intent(this, NotificationListener::class.java).also { intent -> stopService(intent) }
-            serviceStatusTv?.text = getString(R.string.service_status, if (isNotificationServiceEnabled()) "running" else "stopped")
-            //stopForeground(ForegroundNotificationListener(), 0)
+            packageManager.setComponentEnabledSetting(ComponentName(this, NotificationListener::class.java), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
         }
 
         startBtn?.setOnClickListener {
+            packageManager.setComponentEnabledSetting(ComponentName(this, NotificationListener::class.java), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
             Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
-            serviceStatusTv?.text = getString(R.string.service_status, if (isNotificationServiceEnabled()) "running" else "stopped")
+        }
+
+        voiceSwitch?.setOnCheckedChangeListener { _, isChecked ->
+            val editor = sharedPreferences.edit()
+            editor.putBoolean(BtNames.useTTS_SF, isChecked)
+            editor.apply()
+
+            val intent = Intent("com.katdmy.android.lexusbluetoothspotify.onVoiceUseChange")
+            intent.putExtra("command", "onVoiceUseChange")
+            sendBroadcast(intent)
         }
 
         clearBtn?.setOnClickListener { tv?.text = "" }
@@ -166,26 +173,6 @@ class MainActivity : AppCompatActivity(){
             //Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
         } else
             startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
-    }
-
-    private fun isNotificationServiceEnabled(): Boolean {
-        val pkgName = packageName
-        val flat: String = Settings.Secure.getString(
-                contentResolver,
-                ENABLED_NOTIFICATION_LISTENERS
-        )
-        if (!TextUtils.isEmpty(flat)) {
-            val names = flat.split(":").toTypedArray()
-            for (i in names.indices) {
-                val cn = ComponentName.unflattenFromString(names[i])
-                if (cn != null) {
-                    if (TextUtils.equals(pkgName, cn.packageName)) {
-                        return true
-                    }
-                }
-            }
-        }
-        return false
     }
 
     private fun isNotificationListenerServiceEnabled(context: Context): Boolean {
@@ -242,7 +229,7 @@ class MainActivity : AppCompatActivity(){
     }
 
     @Suppress("BlockingMethodInNonBlockingContext")
-    private suspend fun connectBtaAttempt(btaBluetoothDevice: BluetoothDevice) : Boolean {
+    private suspend fun connectBtaAttempt(btaBluetoothDevice: BluetoothDevice): Boolean {
         val btSocket: BluetoothSocket =
                 btaBluetoothDevice.createRfcommSocketToServiceRecord(UUID.fromString(BtNames.BT_DEVICE_UUID))
 
