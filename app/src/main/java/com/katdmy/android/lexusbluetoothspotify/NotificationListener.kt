@@ -15,15 +15,14 @@ class NotificationListener : NotificationListenerService() {
     private val TAG = this.javaClass.simpleName
     private val FOREGROUND_NOTIFICATION_CHANNEL_ID = 10001
     private var useTTS = false
-    private lateinit var sharedPreferences: SharedPreferences //= PreferenceManager.getDefaultSharedPreferences(this)
-            //getSharedPreferences("sharedPreferences", Context.MODE_PRIVATE)
-    private lateinit var listeningCommunicator : ListeningCommunicator
+    private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var listeningCommunicator: ListeningCommunicator
     private lateinit var tts: TextToSpeech
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.e(TAG, "$TAG is started with intent: $intent")
-        tts = TextToSpeech(this, null)
 
+        tts = TextToSpeech(this, null)
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         useTTS = sharedPreferences.getBoolean(BtNames.useTTS_SF, false)
         listeningCommunicator = ListeningCommunicator(useTTS, sharedPreferences)
@@ -63,11 +62,12 @@ class NotificationListener : NotificationListenerService() {
     }
 
     override fun onListenerConnected() {
-        super.onListenerConnected()
+        //super.onListenerConnected()
+        Log.e(TAG, "onListenerConnected(): applicationContext = $applicationContext")
         Log.e(TAG, "Service Reader Connected")
         val not = createNotification()
         val mNotificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         mNotificationManager.notify(FOREGROUND_NOTIFICATION_CHANNEL_ID, not)
 
         startForeground(FOREGROUND_NOTIFICATION_CHANNEL_ID, not)
@@ -84,20 +84,20 @@ class NotificationListener : NotificationListenerService() {
         val channelId = createNotificationChannel("my_service", "My Background Service")
 
         val pendingIntent: PendingIntent =
-            Intent(this, MainActivity::class.java).let { notificationIntent ->
-                PendingIntent.getActivity(this, 0, notificationIntent, 0)
-            }
+                Intent(this, MainActivity::class.java).let { notificationIntent ->
+                    PendingIntent.getActivity(this, 0, notificationIntent, 0)
+                }
 
         return Notification.Builder(this, channelId)
-            .setContentTitle(getText(R.string.notification_title))
-            .setContentText(getText(R.string.notification_message))
-            .setSmallIcon(R.drawable.ic_notifications)
-            .setContentIntent(pendingIntent)
-            //.setTicker(getText(R.string.ticker_text))
-            .build()
+                .setContentTitle(getText(R.string.notification_title))
+                .setContentText(getText(R.string.notification_message))
+                .setSmallIcon(R.drawable.ic_notifications)
+                .setContentIntent(pendingIntent)
+                //.setTicker(getText(R.string.ticker_text))
+                .build()
     }
 
-    private fun createNotificationChannel(channelId: String, channelName: String): String{
+    private fun createNotificationChannel(channelId: String, channelName: String): String {
         val chan = NotificationChannel(channelId,
                 channelName, NotificationManager.IMPORTANCE_NONE)
         chan.lightColor = Color.BLUE
@@ -110,7 +110,7 @@ class NotificationListener : NotificationListenerService() {
     class ListeningCommunicator(
             private var useTTS: Boolean,
             private val sharedPreferences: SharedPreferences
-            ) : BroadcastReceiver() {
+    ) : BroadcastReceiver() {
 
         override fun onReceive(context: Context, intent: Intent) {
             Log.d(this.javaClass.simpleName, "***** onVoiceUseChange: Received command")

@@ -28,9 +28,7 @@ class NotificationBroadcastReceiver(private val showNotificationData: (String) -
             if (key == "0|ru.alarmtrade.connect|1076889714|null|10269")
                 connectBta(context)
         }
-
     }
-
 
     private fun connectBta(context: Context?) {
         val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
