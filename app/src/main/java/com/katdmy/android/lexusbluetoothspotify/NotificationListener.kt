@@ -19,15 +19,33 @@ class NotificationListener : NotificationListenerService() {
     private lateinit var listeningCommunicator: ListeningCommunicator
     private lateinit var tts: TextToSpeech
 
-    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        Log.e(TAG, "$TAG is started with intent: $intent")
+
+    override fun onListenerConnected() {
+        //super.onListenerConnected()
+        Log.e(TAG, "onListenerConnected(): applicationContext = $applicationContext")
+        Log.e(TAG, "Service Reader Connected")
+        val not = createNotification()
+        val mNotificationManager =
+                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        mNotificationManager.notify(FOREGROUND_NOTIFICATION_CHANNEL_ID, not)
+
+        startForeground(FOREGROUND_NOTIFICATION_CHANNEL_ID, not)
 
         tts = TextToSpeech(this, null)
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         useTTS = sharedPreferences.getBoolean(BtNames.useTTS_SF, false)
         listeningCommunicator = ListeningCommunicator(useTTS, sharedPreferences)
 
-        return START_STICKY
+        val notificationsIntentFilter = IntentFilter().apply {
+            addAction("com.katdmy.android.lexusbluetoothspotify.onVoiceUseChange")
+        }
+        registerReceiver(listeningCommunicator, notificationsIntentFilter)
+
+    }
+
+    override fun onDestroy() {
+        unregisterReceiver(listeningCommunicator)
+        super.onDestroy()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -54,29 +72,6 @@ class NotificationListener : NotificationListenerService() {
                 tts.speak(data, TextToSpeech.QUEUE_ADD, null, data)
             }
         }
-    }
-
-    override fun onDestroy() {
-        unregisterReceiver(listeningCommunicator)
-        super.onDestroy()
-    }
-
-    override fun onListenerConnected() {
-        //super.onListenerConnected()
-        Log.e(TAG, "onListenerConnected(): applicationContext = $applicationContext")
-        Log.e(TAG, "Service Reader Connected")
-        val not = createNotification()
-        val mNotificationManager =
-                getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        mNotificationManager.notify(FOREGROUND_NOTIFICATION_CHANNEL_ID, not)
-
-        startForeground(FOREGROUND_NOTIFICATION_CHANNEL_ID, not)
-
-        val notificationsIntentFilter = IntentFilter().apply {
-            addAction("com.katdmy.android.lexusbluetoothspotify.onVoiceUseChange")
-        }
-        registerReceiver(listeningCommunicator, notificationsIntentFilter)
-
     }
 
     private fun createNotification(): Notification {
