@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
 import android.provider.Settings
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Button
@@ -38,7 +39,9 @@ class MainActivity : AppCompatActivity() {
     private var openMusicBtn: Button? = null
 
     private val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
-    private val notificationBroadcastReceiver = NotificationBroadcastReceiver { text -> tv?.append(text) }
+    private val setDebugText = { text: String -> tv?.append(text) }
+    private val stopTTS = { voiceSwitch?.isChecked = false }
+    private val notificationBroadcastReceiver = NotificationBroadcastReceiver(setDebugText, stopTTS)
     private val btBroadcastReceiver = BtBroadcastReceiver { data -> btStatusTv?.text = data }
     private val PERMISSION_CODE = 654
     private val REQUEST_ENABLE_BT = 655
@@ -48,6 +51,9 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
+
+        sharedPreferences =
+                PreferenceManager.getDefaultSharedPreferences(applicationContext)
 
         initViews()
         setUpClickListeners()
@@ -99,6 +105,8 @@ class MainActivity : AppCompatActivity() {
         tv = findViewById(R.id.tv)
         connectBtaBtn = findViewById(R.id.connect_bta_btn)
         openMusicBtn = findViewById(R.id.open_music_btn)
+
+        voiceSwitch!!.isChecked = sharedPreferences.getBoolean(BtNames.useTTS_SF, false)
     }
 
     private fun setUpClickListeners() {
@@ -108,6 +116,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         startBtn?.setOnClickListener {
+            Log.e(this.javaClass.simpleName, "applicationContext: $applicationContext")
+
             packageManager.setComponentEnabledSetting(ComponentName(this, NotificationListener::class.java), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
             Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
         }
@@ -117,7 +127,7 @@ class MainActivity : AppCompatActivity() {
             editor.putBoolean(BtNames.useTTS_SF, isChecked)
             editor.apply()
 
-            val intent = Intent("com.katdmy.android.lexusbluetoothspotify.onVoiceUseChange")
+            val intent = Intent("com.katdmy.android.lexusbluetoothspotify.notificationListenerService")
             intent.putExtra("command", "onVoiceUseChange")
             sendBroadcast(intent)
         }
@@ -154,9 +164,9 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun registerReceivers() {
-        if (Settings.Secure.getString(this.contentResolver, "enabled_notification_listeners").contains(
-                        applicationContext.packageName
-                )) {
+//        if (Settings.Secure.getString(this.contentResolver, "enabled_notification_listeners").contains(
+//                        applicationContext.packageName
+//                )) {
             val notificationsIntentFilter = IntentFilter().apply {
                 addAction("com.katdmy.android.lexusbluetoothspotify")
             }
@@ -170,13 +180,8 @@ class MainActivity : AppCompatActivity() {
             registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
 
             Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
-        } else
-            startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
-    }
-
-    private fun isNotificationListenerServiceEnabled(context: Context): Boolean {
-        val packageNames = NotificationManagerCompat.getEnabledListenerPackages(context)
-        return packageNames.contains(context.packageName)
+//        } else
+//            startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
     }
 
     private fun connectBta() {

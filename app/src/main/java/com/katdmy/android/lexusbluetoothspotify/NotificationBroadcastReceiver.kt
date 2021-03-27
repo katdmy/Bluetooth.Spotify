@@ -13,7 +13,7 @@ import kotlinx.coroutines.*
 import java.io.IOException
 import java.util.*
 
-class NotificationBroadcastReceiver(private val showNotificationData: (String) -> Unit) : BroadcastReceiver() {
+class NotificationBroadcastReceiver(private val showNotificationData: (String) -> Unit?, private val stopTTS: () -> Unit) : BroadcastReceiver() {
 
     private val scope = CoroutineScope(Dispatchers.IO)
 
@@ -22,15 +22,16 @@ class NotificationBroadcastReceiver(private val showNotificationData: (String) -
         val key = intent?.getStringExtra("Key") ?: ""
         val title = intent?.getStringExtra("Title") ?: ""
         val text = intent?.getStringExtra("Text") ?: ""
+        val command = intent?.getStringExtra("command") ?: ""
 
         if (packageName == "ru.alarmtrade.connect") {
             showNotificationData("$packageName\n$key\n$title\n$text")
             if (key == "0|ru.alarmtrade.connect|1076889714|null|10269")
                 connectBta(context)
+        } else if (command == "onNotificationStopTTSClick") {
+            stopTTS()
         }
-
     }
-
 
     private fun connectBta(context: Context?) {
         val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
