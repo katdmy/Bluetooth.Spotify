@@ -55,7 +55,6 @@ class MainActivity : AppCompatActivity() {
 
         sharedPreferences =
               getSharedPreferences("sharedPreferences", Context.MODE_PRIVATE)
-            //PreferenceManager.getDefaultSharedPreferences(applicationContext)
     }
 
 
@@ -170,7 +169,7 @@ class MainActivity : AppCompatActivity() {
             }
             registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
 
-            //Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
+            Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
         } else
             startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
     }
@@ -198,6 +197,7 @@ class MainActivity : AppCompatActivity() {
 
         if (!bluetoothAdapter.isEnabled) {
             val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
+            @Suppress("DEPRECATION")
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
         }
 

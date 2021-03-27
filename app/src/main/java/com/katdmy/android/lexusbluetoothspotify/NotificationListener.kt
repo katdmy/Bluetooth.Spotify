@@ -15,9 +15,9 @@ class NotificationListener : NotificationListenerService() {
     private val TAG = this.javaClass.simpleName
     private val FOREGROUND_NOTIFICATION_CHANNEL_ID = 10001
     private var useTTS = false
-    private lateinit var sharedPreferences: SharedPreferences //= PreferenceManager.getDefaultSharedPreferences(this)
-            //getSharedPreferences("sharedPreferences", Context.MODE_PRIVATE)
-    private lateinit var listeningCommunicator : ListeningCommunicator
+    private var oldSbn: StatusBarNotification? = null
+    private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var listeningCommunicator: ListeningCommunicator
     private lateinit var tts: TextToSpeech
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -37,7 +37,10 @@ class NotificationListener : NotificationListenerService() {
         intent.putExtra("Key", sbn?.key)
         intent.putExtra("Title", sbn?.notification?.extras?.getString("android.title"))
         intent.putExtra("Text", sbn?.notification?.extras?.getString("android.text"))
-        sendBroadcast(intent)
+        if (sbn != oldSbn) {
+            sendBroadcast(intent)
+            oldSbn = sbn
+        }
 
         /*if (sbn?.packageName == "ru.alarmtrade.connect"
             && sbn.key == "0|ru.alarmtrade.connect|1076889714|null|10269") {

@@ -52,6 +52,7 @@ class NotificationBroadcastReceiver(private val showNotificationData: (String) -
             }
         }
         if (btaBluetoothDevice != null) {
+            showNotificationData("BTA address: ${btaBluetoothDevice!!.address}\n")
             bluetoothAdapter.cancelDiscovery()
 
             showNotificationData("Start BTA connecting")
@@ -65,6 +66,8 @@ class NotificationBroadcastReceiver(private val showNotificationData: (String) -
                     isConnected = connectBtaAttempt(btaBluetoothDevice!!, context)
                 }
             }
+        } else {
+            showNotificationData("BTA is not paired")
         }
     }
 
