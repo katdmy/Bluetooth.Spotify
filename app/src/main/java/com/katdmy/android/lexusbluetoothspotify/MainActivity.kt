@@ -39,7 +39,7 @@ class MainActivity : AppCompatActivity() {
     private var openMusicBtn: Button? = null
 
     private val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
-    private val setDebugText = { text: String -> tv?.append(text) }
+    private val setDebugText = { text: String -> tv?.append("\n$text") }
     private val stopTTS = { voiceSwitch?.isChecked = false }
     private val notificationBroadcastReceiver = NotificationBroadcastReceiver(setDebugText, stopTTS)
     private val btBroadcastReceiver = BtBroadcastReceiver { data -> btStatusTv?.text = data }
@@ -58,9 +58,6 @@ class MainActivity : AppCompatActivity() {
         initViews()
         setUpClickListeners()
         registerReceivers()
-
-        sharedPreferences =
-              getSharedPreferences("sharedPreferences", Context.MODE_PRIVATE)
     }
 
 
@@ -117,9 +114,19 @@ class MainActivity : AppCompatActivity() {
 
         startBtn?.setOnClickListener {
             Log.e(this.javaClass.simpleName, "applicationContext: $applicationContext")
-
-            packageManager.setComponentEnabledSetting(ComponentName(this, NotificationListener::class.java), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP)
-            Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
+            packageManager.setComponentEnabledSetting(
+                ComponentName(
+                    this,
+                    NotificationListener::class.java
+                ), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP
+            )
+            packageManager.setComponentEnabledSetting(
+                ComponentName(
+                    this,
+                    NotificationListener::class.java
+                ), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP
+            )
+            //Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
         }
 
         voiceSwitch?.setOnCheckedChangeListener { _, isChecked ->
@@ -127,46 +134,23 @@ class MainActivity : AppCompatActivity() {
             editor.putBoolean(BtNames.useTTS_SF, isChecked)
             editor.apply()
 
-            val intent = Intent("com.katdmy.android.lexusbluetoothspotify.notificationListenerService")
+            val intent =
+                Intent("com.katdmy.android.lexusbluetoothspotify.notificationListenerService")
             intent.putExtra("command", "onVoiceUseChange")
             sendBroadcast(intent)
         }
 
         clearBtn?.setOnClickListener { tv?.text = "" }
-
-        /*createNotificationBtn?.setOnClickListener {
-            val mNotificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-            val mBuilder =
-                    NotificationCompat.Builder(this@MainActivity, default_notification_channel_id)
-            mBuilder.setContentTitle("My Notification")
-            mBuilder.setContentText("Notification Listener Service Example")
-            mBuilder.setTicker("Notification Listener Service Example")
-            mBuilder.setSmallIcon(R.drawable.ic_baseline_notifications_active_24)
-            mBuilder.setAutoCancel(true)
-            val importance = NotificationManager.IMPORTANCE_HIGH
-            val notificationChannel = NotificationChannel(
-                    NOTIFICATION_CHANNEL_ID,
-                    "NOTIFICATION_CHANNEL_NAME",
-                    importance
-            )
-            mBuilder.setChannelId(NOTIFICATION_CHANNEL_ID)
-            mNotificationManager.createNotificationChannel(notificationChannel)
-            mNotificationManager.notify(System.currentTimeMillis().toInt(), mBuilder.build())
-        }*/
-
-        connectBtaBtn?.setOnClickListener {
-            connectBta()
-        }
-
-        openMusicBtn?.setOnClickListener {
-            openMusic()
-        }
+        connectBtaBtn?.setOnClickListener { connectBta() }
+        openMusicBtn?.setOnClickListener { openMusic() }
     }
 
     private fun registerReceivers() {
-//        if (Settings.Secure.getString(this.contentResolver, "enabled_notification_listeners").contains(
-//                        applicationContext.packageName
-//                )) {
+        if (Settings.Secure.getString(this.contentResolver, "enabled_notification_listeners")
+                .contains(
+                    applicationContext.packageName
+                )
+        ) {
             val notificationsIntentFilter = IntentFilter().apply {
                 addAction("com.katdmy.android.lexusbluetoothspotify")
             }
@@ -180,8 +164,8 @@ class MainActivity : AppCompatActivity() {
             registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
 
             Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
-//        } else
-//            startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+        } else
+            startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
     }
 
     private fun connectBta() {
