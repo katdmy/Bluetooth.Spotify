@@ -22,5 +22,6 @@
     <string name="notification_message">Service reading messages and connecting to BTA</string>
 
     <string name="stopTTS">Cancel Audio</string>
+    <string name="startTTS">Start Audio</string>
     <string name="stopService">Stop service</string>
 </resources>
