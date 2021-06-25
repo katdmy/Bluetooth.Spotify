@@ -4,8 +4,6 @@ import android.app.*
 import android.content.*
 import android.content.pm.PackageManager
 import android.graphics.Color
-import android.graphics.drawable.Icon
-import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.speech.tts.TextToSpeech
@@ -22,6 +20,7 @@ class NotificationListener : NotificationListenerService() {
     private lateinit var listeningCommunicator: ListeningCommunicator
     private lateinit var tts: TextToSpeech
     private var lastReadData = ""
+    private var errorMessage = ""
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         Log.e(TAG, "onStartCommand(): intent = $intent")
@@ -41,6 +40,7 @@ class NotificationListener : NotificationListenerService() {
         val notificationsIntentFilter = IntentFilter().apply {
             addAction("com.katdmy.android.lexusbluetoothspotify.notificationListenerServiceTTS")
             addAction("com.katdmy.android.lexusbluetoothspotify.notificationListenerService")
+            addAction("com.katdmy.android.lexusbluetoothspotify.showNotificationWithError")
         }
         registerReceiver(listeningCommunicator, notificationsIntentFilter)
     }
@@ -114,7 +114,8 @@ class NotificationListener : NotificationListenerService() {
 
         val foregroundNotification = Notification.Builder(this, channelId)
             .setContentTitle(getText(R.string.notification_title))
-            .setContentText(getText(R.string.notification_message))
+            //.setContentText(getText(R.string.notification_message))
+            .setStyle(Notification.BigTextStyle().bigText(errorMessage))
             .setSmallIcon(icon)
             .setContentIntent(openActivityPendingIntent)
             .addAction(switchTTSAction)
@@ -166,6 +167,10 @@ class NotificationListener : NotificationListenerService() {
                     ComponentName(context, NotificationListener::class.java),
                     PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP
                 )
+            }
+            if (intent.getStringExtra("command") == "showNotificationWithError") {
+                errorMessage = intent.getStringExtra("errorMessage") ?: ""
+                createNotification()
             }
         }
     }

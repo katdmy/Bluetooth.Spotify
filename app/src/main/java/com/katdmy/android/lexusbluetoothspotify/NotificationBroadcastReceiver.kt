@@ -33,7 +33,18 @@ class NotificationBroadcastReceiver(
             if (key == "0|ru.alarmtrade.connect|1076889714|null|10269") {
                 if (text.contains("Запуск двигателя")) connectBta(context)
                 if (text.contains("Постановка под охрану брелоком")) stopTTS()
-                if (text.contains("Снятие с охраны брелоком")) startTTS()
+                if (text.contains("Снятие с охраны брелоком")) {
+                    startTTS()
+                    try {
+                        connectBta(context)
+                    } catch (e: Throwable) {
+                        context?.sendBroadcast(Intent("com.katdmy.android.lexusbluetoothspotify.showNotificationWithError").apply {
+                            putExtra("command", "showNotificationWithError")
+                            putExtra("errorMessage", e.stackTraceToString())
+                        })
+                        showNotificationData(e.stackTraceToString())
+                    }
+                }
             }
         } else if (command == "onNotificationStopTTSClick") {
             stopTTS()
@@ -86,7 +97,7 @@ class NotificationBroadcastReceiver(
 
         return try {
             btSocket.connect()
-            delay(1_000L)
+            delay(5_000L)
             btSocket.close()
             showNotificationData("Successful connected!")
 
