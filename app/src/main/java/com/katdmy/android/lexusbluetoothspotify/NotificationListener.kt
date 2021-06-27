@@ -29,13 +29,12 @@ class NotificationListener : NotificationListenerService() {
     }
 
     override fun onListenerConnected() {
-        createNotification()
-
         tts = TextToSpeech(this, null)
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         useTTS = sharedPreferences.getBoolean(BtNames.useTTS_SF, false)
-        //listeningCommunicator = ListeningCommunicator(useTTS, sharedPreferences)
         listeningCommunicator = ListeningCommunicator()
+
+        createNotification()
 
         val notificationsIntentFilter = IntentFilter().apply {
             addAction("com.katdmy.android.lexusbluetoothspotify.notificationListenerServiceTTS")
