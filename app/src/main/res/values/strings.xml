@@ -19,7 +19,7 @@
     <string name="connect_bta">Connect BTA</string>
     <string name="open_music">Open music app</string>
     <string name="notification_title">Notification Reader</string>
-    <string name="notification_message">Service reading messages and connecting to BTA</string>
+    <string name="notification_message">Reading messages and connecting to BTA</string>
 
     <string name="stopTTS">Cancel Audio</string>
     <string name="startTTS">Start Audio</string>
