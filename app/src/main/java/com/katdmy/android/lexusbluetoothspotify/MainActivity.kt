@@ -8,6 +8,7 @@ import android.content.*
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -37,11 +38,17 @@ class MainActivity : AppCompatActivity() {
     private var openMusicBtn: Button? = null
 
     private val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
-    private val setDebugText = { text: String -> tv?.append("\n$text") }
-    private val stopTTS = { voiceSwitch?.isChecked = false }
-    private val startTTS = { voiceSwitch?.isChecked = true }
+
+    //    private fun setDebugText(text: String) { tv?.append("\n$text") }
+//    private fun stopTTS() { voiceSwitch?.isChecked = false }
+//    private fun startTTS() { voiceSwitch?.isChecked = true }
     private val notificationBroadcastReceiver =
-        NotificationBroadcastReceiver(setDebugText, stopTTS, startTTS)
+        // NotificationBroadcastReceiver(setDebugText(), stopTTS(), startTTS())
+        NotificationBroadcastReceiver(
+            { text: String -> tv?.append("\n$text") },
+            { voiceSwitch?.isChecked = false },
+            { voiceSwitch?.isChecked = true }
+        )
     private val btBroadcastReceiver = BtBroadcastReceiver { data -> btStatusTv?.text = data }
     private val PERMISSION_CODE = 654
     private val REQUEST_ENABLE_BT = 655

@@ -14,7 +14,7 @@ import java.io.IOException
 import java.util.*
 
 class NotificationBroadcastReceiver(
-    private val showNotificationData: (String) -> Unit?,
+    private val showNotificationData: (String) -> Unit,
     private val stopTTS: () -> Unit,
     private val startTTS: () -> Unit,
 ) : BroadcastReceiver() {
@@ -29,7 +29,8 @@ class NotificationBroadcastReceiver(
         val command = intent?.getStringExtra("command") ?: ""
 
         if (packageName == "ru.alarmtrade.connect") {
-            showNotificationData("$packageName\n$key\n$title\n$text")
+            if ((context?.applicationContext as MyApplication).isAppForeground())
+                showNotificationData("$packageName\n$key\n$title\n$text")
             if (key == "0|ru.alarmtrade.connect|1076889714|null|10269") {
                 if (text.contains("Запуск двигателя")) connectBta(context)
                 if (text.contains("Постановка под охрану брелоком")) stopTTS()
@@ -38,11 +39,12 @@ class NotificationBroadcastReceiver(
                     try {
                         connectBta(context)
                     } catch (e: Throwable) {
-                        context?.sendBroadcast(Intent("com.katdmy.android.lexusbluetoothspotify.showNotificationWithError").apply {
+                        context.sendBroadcast(Intent("com.katdmy.android.lexusbluetoothspotify.showNotificationWithError").apply {
                             putExtra("command", "showNotificationWithError")
                             putExtra("errorMessage", e.stackTraceToString())
                         })
-                        showNotificationData(e.stackTraceToString())
+                        if ((context.applicationContext as MyApplication).isAppForeground())
+                            showNotificationData(e.stackTraceToString())
                     }
                 }
             }
@@ -56,12 +58,14 @@ class NotificationBroadcastReceiver(
     private fun connectBta(context: Context?) {
         val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
         if (bluetoothAdapter == null) {
-            showNotificationData("Device doesn't support Bluetooth")
+            if ((context?.applicationContext as MyApplication).isAppForeground())
+                showNotificationData("Device doesn't support Bluetooth")
             return
         }
 
         if (!bluetoothAdapter.isEnabled) {
-            showNotificationData("Please turn Bluetooth on")
+            if ((context?.applicationContext as MyApplication).isAppForeground())
+                showNotificationData("Please turn Bluetooth on")
             return
         }
 
@@ -75,7 +79,8 @@ class NotificationBroadcastReceiver(
         if (btaBluetoothDevice != null) {
             bluetoothAdapter.cancelDiscovery()
 
-            showNotificationData("Start BTA connecting")
+            if ((context?.applicationContext as MyApplication).isAppForeground())
+                showNotificationData("Start BTA connecting")
 
             scope.launch {
                 var isConnected = false
@@ -99,13 +104,15 @@ class NotificationBroadcastReceiver(
             btSocket.connect()
             delay(5_000L)
             btSocket.close()
-            showNotificationData("Successful connected!")
+            if ((context?.applicationContext as MyApplication).isAppForeground())
+                showNotificationData("Successful connected!")
 
             openMusic(context)
             true
         } catch (e: IOException) {
             btSocket.close()
-            showNotificationData("Error connecting attempt")
+            if ((context?.applicationContext as MyApplication).isAppForeground())
+                showNotificationData("Error connecting attempt")
             false
         }
     }
@@ -120,8 +127,12 @@ class NotificationBroadcastReceiver(
             )
             context?.startActivity(intent)
         } catch (e: ActivityNotFoundException) {
-            Log.e(context?.javaClass?.simpleName, "Music player is not instaled, can't autostart it.")
-            showNotificationData("Music player is not instaled, can't autostart it.")
+            Log.e(
+                context?.javaClass?.simpleName,
+                "Music player is not instaled, can't autostart it."
+            )
+            if ((context?.applicationContext as MyApplication).isAppForeground())
+                showNotificationData("Music player is not instaled, can't autostart it.")
         }
     }
 
