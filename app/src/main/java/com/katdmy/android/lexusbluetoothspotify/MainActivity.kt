@@ -32,18 +32,12 @@ class MainActivity : AppCompatActivity() {
     private var voiceSwitch: SwitchMaterial? = null
     private var btStatusTv: TextView? = null
     private var clearBtn: Button? = null
-    private var createNotificationBtn: Button? = null
     private var tv: TextView? = null
     private var connectBtaBtn: Button? = null
     private var openMusicBtn: Button? = null
 
     private val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
-
-    //    private fun setDebugText(text: String) { tv?.append("\n$text") }
-//    private fun stopTTS() { voiceSwitch?.isChecked = false }
-//    private fun startTTS() { voiceSwitch?.isChecked = true }
     private val notificationBroadcastReceiver =
-        // NotificationBroadcastReceiver(setDebugText(), stopTTS(), startTTS())
         NotificationBroadcastReceiver(
             { text: String -> tv?.append("\n$text") },
             { voiceSwitch?.isChecked = false },
@@ -92,7 +86,6 @@ class MainActivity : AppCompatActivity() {
         voiceSwitch = null
         btStatusTv = null
         clearBtn = null
-        createNotificationBtn = null
         tv = null
         connectBtaBtn = null
         openMusicBtn = null
@@ -105,7 +98,6 @@ class MainActivity : AppCompatActivity() {
         voiceSwitch = findViewById(R.id.voice_sw)
         btStatusTv = findViewById(R.id.bt_status_tv)
         clearBtn = findViewById(R.id.clear_btn)
-        createNotificationBtn = findViewById(R.id.create_notification_btn)
         tv = findViewById(R.id.tv)
         connectBtaBtn = findViewById(R.id.connect_bta_btn)
         openMusicBtn = findViewById(R.id.open_music_btn)
@@ -133,7 +125,6 @@ class MainActivity : AppCompatActivity() {
                     NotificationListener::class.java
                 ), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP
             )
-            //Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
         }
 
         voiceSwitch?.setOnCheckedChangeListener { _, isChecked ->

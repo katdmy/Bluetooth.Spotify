@@ -21,7 +21,8 @@
     <string name="notification_title">Notification Reader</string>
     <string name="notification_message">Reading messages and connecting to BTA</string>
 
-    <string name="stopTTS">Cancel Audio</string>
+    <string name="stopTTS">Stop Audio</string>
     <string name="startTTS">Start Audio</string>
     <string name="stopService">Stop service</string>
+    <string name="text_to_voice">Text-to-voice</string>
 </resources>

@@ -1,12 +1,17 @@
 package com.katdmy.android.lexusbluetoothspotify
 
+import android.annotation.SuppressLint
 import android.app.*
 import android.content.*
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import androidx.preference.PreferenceManager
 
@@ -19,6 +24,8 @@ class NotificationListener : NotificationListenerService() {
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var listeningCommunicator: ListeningCommunicator
     private lateinit var tts: TextToSpeech
+    private lateinit var audioManager: AudioManager
+    private lateinit var focusRequest: AudioFocusRequest
     private var lastReadData = ""
     private var errorMessage = ""
 
@@ -29,7 +36,22 @@ class NotificationListener : NotificationListenerService() {
     }
 
     override fun onListenerConnected() {
-        tts = TextToSpeech(this, null)
+        tts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                ttsInitialized()
+            }
+        }
+
+        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        focusRequest =
+            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE).run {
+                setAudioAttributes(AudioAttributes.Builder().run {
+                    setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+                    setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    build()
+                })
+                build()
+            }
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(applicationContext)
         useTTS = sharedPreferences.getBoolean(BtNames.useTTS_SF, false)
         listeningCommunicator = ListeningCommunicator()
@@ -42,6 +64,24 @@ class NotificationListener : NotificationListenerService() {
             addAction("com.katdmy.android.lexusbluetoothspotify.showNotificationWithError")
         }
         registerReceiver(listeningCommunicator, notificationsIntentFilter)
+
+    }
+
+    private fun ttsInitialized() {
+        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String?) {
+                audioManager.requestAudioFocus(focusRequest)
+            }
+
+            override fun onDone(utteranceId: String?) {
+                audioManager.abandonAudioFocusRequest(focusRequest)
+            }
+
+            override fun onError(utteranceId: String?) {
+                audioManager.abandonAudioFocusRequest(focusRequest)
+            }
+
+        })
     }
 
     override fun onDestroy() {
@@ -73,6 +113,7 @@ class NotificationListener : NotificationListenerService() {
         }
     }
 
+    @SuppressLint("UnspecifiedImmutableFlag")
     fun createNotification() {
         val channelId = createNotificationChannel("my_service", "My Background Service")
 

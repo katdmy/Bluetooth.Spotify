@@ -41,7 +41,7 @@ class NotificationBroadcastReceiver(
                     } catch (e: Throwable) {
                         context.sendBroadcast(Intent("com.katdmy.android.lexusbluetoothspotify.showNotificationWithError").apply {
                             putExtra("command", "showNotificationWithError")
-                            putExtra("errorMessage", e.stackTraceToString())
+                            putExtra("errorMessage", e.localizedMessage)
                         })
                         if ((context.applicationContext as MyApplication).isAppForeground())
                             showNotificationData(e.stackTraceToString())
