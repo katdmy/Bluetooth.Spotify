@@ -1,4 +1,4 @@
-package com.katdmy.android.lexusbluetoothspotify
+package com.katdmy.android.bluetoothspotify
 
 import android.annotation.SuppressLint
 import android.app.*
@@ -26,6 +26,8 @@ class NotificationListener : NotificationListenerService() {
     private lateinit var tts: TextToSpeech
     private lateinit var audioManager: AudioManager
     private lateinit var focusRequest: AudioFocusRequest
+    private val btBroadcastReceiver =
+        BtBroadcastReceiver { status -> switchTTS(applicationContext, status) }
     private var lastReadData = ""
     private var errorMessage = ""
 
@@ -59,12 +61,17 @@ class NotificationListener : NotificationListenerService() {
         createNotification()
 
         val notificationsIntentFilter = IntentFilter().apply {
-            addAction("com.katdmy.android.lexusbluetoothspotify.notificationListenerServiceTTS")
-            addAction("com.katdmy.android.lexusbluetoothspotify.notificationListenerService")
-            addAction("com.katdmy.android.lexusbluetoothspotify.showNotificationWithError")
+            addAction("com.katdmy.android.bluetoothspotify.notificationListenerServiceTTS")
+            addAction("com.katdmy.android.bluetoothspotify.notificationListenerService")
+            addAction("com.katdmy.android.bluetoothspotify.showNotificationWithError")
         }
         registerReceiver(listeningCommunicator, notificationsIntentFilter)
 
+        val btStatusIntentFilter = IntentFilter().apply {
+            addAction("android.bluetooth.device.action.ACL_CONNECTED")
+            addAction("android.bluetooth.device.action.ACL_DISCONNECTED")
+        }
+        registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
     }
 
     private fun ttsInitialized() {
@@ -90,8 +97,23 @@ class NotificationListener : NotificationListenerService() {
     }
 
 
+    fun switchTTS(context: Context, status: Boolean) {
+        useTTS = status
+
+        val editor = sharedPreferences.edit()
+        editor.putBoolean(BtNames.useTTS_SF, useTTS)
+        editor.apply()
+
+        val switchTTSIntent = Intent("com.katdmy.android.bluetoothspotify")
+        if (useTTS) switchTTSIntent.putExtra("command", "onNotificationStartTTSClick")
+        else switchTTSIntent.putExtra("command", "onNotificationStopTTSClick")
+        context.sendBroadcast(switchTTSIntent)
+
+        createNotification()
+    }
+
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        val intent = Intent("com.katdmy.android.lexusbluetoothspotify")
+        val intent = Intent("com.katdmy.android.bluetoothspotify")
         intent.putExtra("Package Name", sbn?.packageName)
         intent.putExtra("Key", sbn?.key)
         intent.putExtra("Title", sbn?.notification?.extras?.getString("android.title"))
@@ -123,7 +145,7 @@ class NotificationListener : NotificationListenerService() {
             }
 
         val switchTTSIntent =
-            Intent("com.katdmy.android.lexusbluetoothspotify.notificationListenerServiceTTS").apply {
+            Intent("com.katdmy.android.bluetoothspotify.notificationListenerServiceTTS").apply {
                 putExtra("command", "onNotificationSwitchTTSClick")
             }
         val switchTTSPendingIntent: PendingIntent =
@@ -137,7 +159,7 @@ class NotificationListener : NotificationListenerService() {
             .build()
 
         val stopServiceIntent =
-            Intent("com.katdmy.android.lexusbluetoothspotify.notificationListenerService").apply {
+            Intent("com.katdmy.android.bluetoothspotify.notificationListenerService").apply {
                 putExtra("command", "stopServiceIntentClick")
             }
         val stopServicePendingIntent: PendingIntent =
@@ -166,6 +188,7 @@ class NotificationListener : NotificationListenerService() {
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         mNotificationManager.notify(FOREGROUND_NOTIFICATION_ID, foregroundNotification)
 
+        stopForeground(false)
         startForeground(FOREGROUND_NOTIFICATION_ID, foregroundNotification)
     }
 
@@ -192,14 +215,7 @@ class NotificationListener : NotificationListenerService() {
             if (intent.getStringExtra("command") == "onNotificationSwitchTTSClick") {
                 useTTS = !useTTS
                 createNotification()
-                val editor = sharedPreferences.edit()
-                editor.putBoolean(BtNames.useTTS_SF, useTTS)
-                editor.apply()
-
-                val switchTTSIntent = Intent("com.katdmy.android.lexusbluetoothspotify")
-                if (useTTS) switchTTSIntent.putExtra("command", "onNotificationStartTTSClick")
-                else switchTTSIntent.putExtra("command", "onNotificationStopTTSClick")
-                context.sendBroadcast(switchTTSIntent)
+                switchTTS(context, useTTS)
             }
             if (intent.getStringExtra("command") == "stopServiceIntentClick") {
                 val pm = context.packageManager

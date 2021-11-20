@@ -55,11 +55,11 @@
         android:id="@+id/voice_sw"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
-        android:layout_marginVertical="8dp"
+        android:layout_marginVertical="16dp"
         android:layout_marginHorizontal="16dp"
         android:text="@string/text_to_voice"
         android:textAppearance="?android:textAppearanceSmall"
-        app:layout_constraintBottom_toTopOf="@id/open_music_btn"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/clear_btn" />
 
@@ -89,18 +89,7 @@
         android:layout_marginHorizontal="16dp"
         android:text="@string/open_music"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/connect_bta_btn"
+        app:layout_constraintEnd_toStartOf="@id/voice_sw"
         app:layout_constraintStart_toStartOf="parent" />
-
-    <Button
-        android:id="@+id/connect_bta_btn"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginVertical="16dp"
-        android:layout_marginHorizontal="16dp"
-        android:text="@string/connect_bta"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/open_music_btn" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

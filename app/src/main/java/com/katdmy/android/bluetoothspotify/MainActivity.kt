@@ -1,9 +1,5 @@
-package com.katdmy.android.lexusbluetoothspotify
+package com.katdmy.android.bluetoothspotify
 
-import android.Manifest
-import android.bluetooth.BluetoothAdapter
-import android.bluetooth.BluetoothDevice
-import android.bluetooth.BluetoothSocket
 import android.content.*
 import android.content.pm.PackageManager
 import android.net.Uri
@@ -14,15 +10,10 @@ import android.view.Menu
 import android.view.MenuItem
 import android.widget.Button
 import android.widget.TextView
-import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
-import androidx.core.content.ContextCompat
 import androidx.preference.PreferenceManager
 import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.*
-import java.io.IOException
-import java.util.*
 
 
 class MainActivity : AppCompatActivity() {
@@ -33,7 +24,6 @@ class MainActivity : AppCompatActivity() {
     private var btStatusTv: TextView? = null
     private var clearBtn: Button? = null
     private var tv: TextView? = null
-    private var connectBtaBtn: Button? = null
     private var openMusicBtn: Button? = null
 
     private val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
@@ -43,7 +33,8 @@ class MainActivity : AppCompatActivity() {
             { voiceSwitch?.isChecked = false },
             { voiceSwitch?.isChecked = true }
         )
-    private val btBroadcastReceiver = BtBroadcastReceiver { data -> btStatusTv?.text = data }
+
+    //private val btBroadcastReceiver = BtBroadcastReceiver { data -> btStatusTv?.text = data }
     private val PERMISSION_CODE = 654
     private val REQUEST_ENABLE_BT = 655
     private val scope = CoroutineScope(Dispatchers.IO)
@@ -87,7 +78,6 @@ class MainActivity : AppCompatActivity() {
         btStatusTv = null
         clearBtn = null
         tv = null
-        connectBtaBtn = null
         openMusicBtn = null
     }
 
@@ -99,9 +89,7 @@ class MainActivity : AppCompatActivity() {
         btStatusTv = findViewById(R.id.bt_status_tv)
         clearBtn = findViewById(R.id.clear_btn)
         tv = findViewById(R.id.tv)
-        connectBtaBtn = findViewById(R.id.connect_bta_btn)
         openMusicBtn = findViewById(R.id.open_music_btn)
-
         voiceSwitch!!.isChecked = sharedPreferences.getBoolean(BtNames.useTTS_SF, false)
     }
 
@@ -133,13 +121,12 @@ class MainActivity : AppCompatActivity() {
             editor.apply()
 
             val intent =
-                Intent("com.katdmy.android.lexusbluetoothspotify.notificationListenerService")
+                Intent("com.katdmy.android.bluetoothspotify.notificationListenerService")
             intent.putExtra("command", "onVoiceUseChange")
             sendBroadcast(intent)
         }
 
         clearBtn?.setOnClickListener { tv?.text = "" }
-        connectBtaBtn?.setOnClickListener { connectBta() }
         openMusicBtn?.setOnClickListener { openMusic() }
     }
 
@@ -150,89 +137,19 @@ class MainActivity : AppCompatActivity() {
                 )
         ) {
             val notificationsIntentFilter = IntentFilter().apply {
-                addAction("com.katdmy.android.lexusbluetoothspotify")
+                addAction("com.katdmy.android.bluetoothspotify")
             }
             registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter)
 
-            val btStatusIntentFilter = IntentFilter().apply {
+            /*val btStatusIntentFilter = IntentFilter().apply {
                 addAction("android.bluetooth.device.action.ACL_CONNECTED")
-                addAction("android.bluetooth.device.action.ACL_DISCONNECT_REQUESTED")
                 addAction("android.bluetooth.device.action.ACL_DISCONNECTED")
             }
-            registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
+            registerReceiver(btBroadcastReceiver, btStatusIntentFilter) */
 
             Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
         } else
             startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
-    }
-
-    private fun connectBta() {
-        if (ContextCompat.checkSelfPermission(baseContext,
-                        Manifest.permission.ACCESS_BACKGROUND_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(
-                    this,
-                    arrayOf(Manifest.permission.ACCESS_BACKGROUND_LOCATION),
-                    PERMISSION_CODE)
-        }
-
-        val bluetoothAdapter = BluetoothAdapter.getDefaultAdapter()
-        if (bluetoothAdapter == null) {
-            Toast.makeText(this, "Device doesn't support Bluetooth", Toast.LENGTH_LONG).show()
-            return
-        }
-
-        if (!bluetoothAdapter.isEnabled) {
-            val enableBtIntent = Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE)
-            @Suppress("DEPRECATION")
-            startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT)
-        }
-
-        tv?.text = ""
-        var btaBluetoothDevice: BluetoothDevice? = null
-        val pairedDevices: Set<BluetoothDevice>? = bluetoothAdapter.bondedDevices
-        pairedDevices?.forEach { device ->
-            if (device.name == BtNames.BT_DEVICE_NAME) {
-                btaBluetoothDevice = device // BTA bluetooth device
-            }
-        }
-        if (btaBluetoothDevice != null) {
-            tv?.append("BTA address: ${btaBluetoothDevice!!.address}\n")
-            bluetoothAdapter.cancelDiscovery()
-
-            scope.launch {
-                var isConnected = false
-                var connectionAttempts = 0
-
-                while (!isConnected && connectionAttempts < 20) {
-                    connectionAttempts += 1
-                    isConnected = connectBtaAttempt(btaBluetoothDevice!!)
-                }
-            }
-
-        } else {
-            tv?.append("BTA is not paired")
-        }
-    }
-
-    @Suppress("BlockingMethodInNonBlockingContext")
-    private suspend fun connectBtaAttempt(btaBluetoothDevice: BluetoothDevice): Boolean {
-        val btSocket: BluetoothSocket =
-                btaBluetoothDevice.createRfcommSocketToServiceRecord(UUID.fromString(BtNames.BT_DEVICE_UUID))
-
-        return try {
-            btSocket.connect()
-            withContext(Dispatchers.Main) { tv?.append("\nBTA is connected!") }
-            delay(1_000L)
-            btSocket.close()
-
-            openMusic()
-            true
-        } catch (e: IOException) {
-            withContext(Dispatchers.Main) { tv?.append("\nBTA is not connected.") }
-            btSocket.close()
-            false
-        }
     }
 
     private fun openMusic() {
