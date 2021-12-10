@@ -99,6 +99,7 @@ class NotificationListener : NotificationListenerService() {
 
     fun switchTTS(context: Context, status: Boolean) {
         useTTS = status
+        if (!useTTS) tts.stop()
 
         val editor = sharedPreferences.edit()
         editor.putBoolean(BtNames.useTTS_SF, useTTS)
