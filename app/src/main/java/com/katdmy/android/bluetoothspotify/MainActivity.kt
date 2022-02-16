@@ -1,8 +1,10 @@
 package com.katdmy.android.bluetoothspotify
 
+import android.app.Activity
 import android.content.*
 import android.content.pm.PackageManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -16,7 +18,7 @@ import com.google.android.material.switchmaterial.SwitchMaterial
 import kotlinx.coroutines.*
 
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : Activity() {
 
     private var stopBtn: Button? = null
     private var startBtn: Button? = null
@@ -34,10 +36,8 @@ class MainActivity : AppCompatActivity() {
             { voiceSwitch?.isChecked = true }
         )
 
-    //private val btBroadcastReceiver = BtBroadcastReceiver { data -> btStatusTv?.text = data }
     private val PERMISSION_CODE = 654
     private val REQUEST_ENABLE_BT = 655
-    private val scope = CoroutineScope(Dispatchers.IO)
     private lateinit var sharedPreferences: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -50,23 +50,6 @@ class MainActivity : AppCompatActivity() {
         initViews()
         setUpClickListeners()
         registerReceivers()
-    }
-
-
-    override fun onCreateOptionsMenu(menu: Menu?): Boolean {
-        menuInflater.inflate(R.menu.menu_main, menu)  // Menu Resource, Menu
-        return true
-    }
-
-    override fun onOptionsItemSelected(item: MenuItem): Boolean {
-        return when (item.itemId) {
-            R.id.action_settings -> {
-                intent = Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS")
-                startActivity(intent)
-                true
-            }
-            else -> super.onOptionsItemSelected(item)
-        }
     }
 
     override fun onDestroy() {
@@ -96,7 +79,12 @@ class MainActivity : AppCompatActivity() {
     private fun setUpClickListeners() {
 
         stopBtn?.setOnClickListener {
-            packageManager.setComponentEnabledSetting(ComponentName(this, NotificationListener::class.java), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP)
+            packageManager.setComponentEnabledSetting(
+                ComponentName(
+                    this,
+                    NotificationListener::class.java
+                ), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP
+            )
         }
 
         startBtn?.setOnClickListener {
@@ -113,6 +101,10 @@ class MainActivity : AppCompatActivity() {
                     NotificationListener::class.java
                 ), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP
             )
+
+            if (!isNotificationServiceRunning()) {
+                startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
+            }
         }
 
         voiceSwitch?.setOnCheckedChangeListener { _, isChecked ->
@@ -128,6 +120,14 @@ class MainActivity : AppCompatActivity() {
 
         clearBtn?.setOnClickListener { tv?.text = "" }
         openMusicBtn?.setOnClickListener { openMusic() }
+    }
+
+    private fun isNotificationServiceRunning(): Boolean {
+        val enabledNotificationListeners =
+            Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
+        return enabledNotificationListeners != null && enabledNotificationListeners.contains(
+            packageName
+        )
     }
 
     private fun registerReceivers() {
@@ -162,7 +162,7 @@ class MainActivity : AppCompatActivity() {
             )
             this.startActivity(intent)
         } catch (e: ActivityNotFoundException) {
-            tv?.append("\nMusic player is not instaled, can't autostart it.")
+            tv?.append("\nMusic player is not installed, can't autostart it.")
         }
     }
 

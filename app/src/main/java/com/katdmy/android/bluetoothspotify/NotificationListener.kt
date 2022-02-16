@@ -28,7 +28,6 @@ class NotificationListener : NotificationListenerService() {
     private lateinit var focusRequest: AudioFocusRequest
     private val btBroadcastReceiver =
         BtBroadcastReceiver { status -> switchTTS(applicationContext, status) }
-    private var lastReadData = ""
     private var errorMessage = ""
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -128,21 +127,19 @@ class NotificationListener : NotificationListenerService() {
                 val title = intent.getStringExtra("Title") ?: ""
                 val text = intent.getStringExtra("Text") ?: ""
                 val data = "$title - $text"
-                if (data != lastReadData) {
+                if (sbn?.notification?.sortKey == "1") {
                     tts.speak(data, TextToSpeech.QUEUE_ADD, null, data)
-                    lastReadData = data
                 }
             }
         }
     }
 
-    @SuppressLint("UnspecifiedImmutableFlag")
     fun createNotification() {
         val channelId = createNotificationChannel("my_service", "My Background Service")
 
         val openActivityPendingIntent: PendingIntent =
             Intent(this, MainActivity::class.java).let { openActivityIntent ->
-                PendingIntent.getActivity(this, 0, openActivityIntent, 0)
+                PendingIntent.getActivity(this, 0, openActivityIntent, PendingIntent.FLAG_IMMUTABLE)
             }
 
         val switchTTSIntent =
@@ -150,7 +147,7 @@ class NotificationListener : NotificationListenerService() {
                 putExtra("command", "onNotificationSwitchTTSClick")
             }
         val switchTTSPendingIntent: PendingIntent =
-            PendingIntent.getBroadcast(this, 0, switchTTSIntent, 0)
+            PendingIntent.getBroadcast(this, 0, switchTTSIntent, PendingIntent.FLAG_IMMUTABLE)
         val switchTTSAction: Notification.Action = Notification.Action.Builder(
             null,
             if (useTTS) getString(R.string.stopTTS)
@@ -164,7 +161,7 @@ class NotificationListener : NotificationListenerService() {
                 putExtra("command", "stopServiceIntentClick")
             }
         val stopServicePendingIntent: PendingIntent =
-            PendingIntent.getBroadcast(this, 0, stopServiceIntent, 0)
+            PendingIntent.getBroadcast(this, 0, stopServiceIntent, PendingIntent.FLAG_IMMUTABLE)
         val stopServiceAction: Notification.Action = Notification.Action.Builder(
             null,
             getString(R.string.stopService),
