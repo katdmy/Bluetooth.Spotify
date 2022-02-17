@@ -1,21 +1,16 @@
 package com.katdmy.android.bluetoothspotify
 
 import android.app.Activity
+import android.bluetooth.BluetoothProfile
 import android.content.*
 import android.content.pm.PackageManager
-import android.net.Uri
-import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
-import android.view.Menu
-import android.view.MenuItem
 import android.widget.Button
 import android.widget.TextView
-import androidx.appcompat.app.AppCompatActivity
 import androidx.preference.PreferenceManager
 import com.google.android.material.switchmaterial.SwitchMaterial
-import kotlinx.coroutines.*
 
 
 class MainActivity : Activity() {
@@ -28,16 +23,15 @@ class MainActivity : Activity() {
     private var tv: TextView? = null
     private var openMusicBtn: Button? = null
 
-    private val ENABLED_NOTIFICATION_LISTENERS = "enabled_notification_listeners"
     private val notificationBroadcastReceiver =
         NotificationBroadcastReceiver(
             { text: String -> tv?.append("\n$text") },
             { voiceSwitch?.isChecked = false },
             { voiceSwitch?.isChecked = true }
         )
+    private val btBroadcastReceiver =
+        BtBroadcastReceiver { status -> showBtStatus(status) }
 
-    private val PERMISSION_CODE = 654
-    private val REQUEST_ENABLE_BT = 655
     private lateinit var sharedPreferences: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -45,7 +39,7 @@ class MainActivity : Activity() {
         setContentView(R.layout.activity_main)
 
         sharedPreferences =
-                PreferenceManager.getDefaultSharedPreferences(applicationContext)
+            PreferenceManager.getDefaultSharedPreferences(applicationContext)
 
         initViews()
         setUpClickListeners()
@@ -141,11 +135,10 @@ class MainActivity : Activity() {
             }
             registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter)
 
-            /*val btStatusIntentFilter = IntentFilter().apply {
-                addAction("android.bluetooth.device.action.ACL_CONNECTED")
-                addAction("android.bluetooth.device.action.ACL_DISCONNECTED")
+            val btStatusIntentFilter = IntentFilter().apply {
+                addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED")
             }
-            registerReceiver(btBroadcastReceiver, btStatusIntentFilter) */
+            registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
 
             Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
         } else
@@ -153,17 +146,15 @@ class MainActivity : Activity() {
     }
 
     private fun openMusic() {
-        try {
-            val intent = Intent(Intent.ACTION_VIEW)
-            intent.data = Uri.parse("spotify:app")
-            intent.putExtra(
-                    Intent.EXTRA_REFERRER,
-                    Uri.parse("android-app://" + this.packageName)
-            )
-            this.startActivity(intent)
-        } catch (e: ActivityNotFoundException) {
-            tv?.append("\nMusic player is not installed, can't autostart it.")
-        }
+        val launchIntent = packageManager.getLaunchIntentForPackage("com.spotify.music")
+        Log.e("openMusicActivity", launchIntent.toString())
+        if (launchIntent != null)
+            startActivity(launchIntent)
+    }
+
+    private fun showBtStatus(status: String) {
+        BluetoothProfile.EXTRA_STATE
+        btStatusTv?.text = "BT audio status: $status"
     }
 
 }
