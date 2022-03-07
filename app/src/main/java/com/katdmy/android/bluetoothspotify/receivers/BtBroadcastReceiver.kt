@@ -1,12 +1,13 @@
-package com.katdmy.android.bluetoothspotify
+package com.katdmy.android.bluetoothspotify.receivers
 
 import android.bluetooth.BluetoothProfile
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 
-class BtBroadcastReceiver(private val changeConnectionStatus: (String) -> Unit) :
-    BroadcastReceiver() {
+class BtBroadcastReceiver(
+    private val changeConnectionStatus: (String) -> Unit
+) : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
         val status = when (intent?.extras?.getInt(BluetoothProfile.EXTRA_STATE)) {
             BluetoothProfile.STATE_DISCONNECTED -> "DISCONNECTED"

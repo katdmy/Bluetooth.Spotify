@@ -1,4 +1,4 @@
-package com.katdmy.android.bluetoothspotify
+package com.katdmy.android.bluetoothspotify.presentation
 
 import android.app.Activity
 import android.bluetooth.BluetoothProfile
@@ -11,6 +11,11 @@ import android.widget.Button
 import android.widget.TextView
 import androidx.preference.PreferenceManager
 import com.google.android.material.switchmaterial.SwitchMaterial
+import com.katdmy.android.bluetoothspotify.*
+import com.katdmy.android.bluetoothspotify.Constants.useTTS_SF
+import com.katdmy.android.bluetoothspotify.receivers.BtBroadcastReceiver
+import com.katdmy.android.bluetoothspotify.receivers.NotificationBroadcastReceiver
+import com.katdmy.android.bluetoothspotify.services.NotificationListener
 
 
 class MainActivity : Activity() {
@@ -23,15 +28,10 @@ class MainActivity : Activity() {
     private var tv: TextView? = null
     private var openMusicBtn: Button? = null
 
-    private val notificationBroadcastReceiver =
-        NotificationBroadcastReceiver(
-            { text: String -> tv?.append("\n$text") },
-            { voiceSwitch?.isChecked = false },
-            { voiceSwitch?.isChecked = true }
-        )
-    private val btBroadcastReceiver =
-        BtBroadcastReceiver { status -> showBtStatus(status) }
+    private lateinit var notificationBroadcastReceiver: NotificationBroadcastReceiver
+    private lateinit var btBroadcastReceiver: BtBroadcastReceiver
 
+    private var useTTS: Boolean = false
     private lateinit var sharedPreferences: SharedPreferences
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -41,9 +41,13 @@ class MainActivity : Activity() {
         sharedPreferences =
             PreferenceManager.getDefaultSharedPreferences(applicationContext)
 
+        notificationBroadcastReceiver = NotificationBroadcastReceiver { changeUseTTS(useTTS) }
+        btBroadcastReceiver = BtBroadcastReceiver { status -> showBtStatus(status) }
+
         initViews()
         setUpClickListeners()
         registerReceivers()
+        useTTS = sharedPreferences.getBoolean(useTTS_SF, false)
     }
 
     override fun onDestroy() {
@@ -67,7 +71,6 @@ class MainActivity : Activity() {
         clearBtn = findViewById(R.id.clear_btn)
         tv = findViewById(R.id.tv)
         openMusicBtn = findViewById(R.id.open_music_btn)
-        voiceSwitch!!.isChecked = sharedPreferences.getBoolean(BtNames.useTTS_SF, false)
     }
 
     private fun setUpClickListeners() {
@@ -103,7 +106,7 @@ class MainActivity : Activity() {
 
         voiceSwitch?.setOnCheckedChangeListener { _, isChecked ->
             val editor = sharedPreferences.edit()
-            editor.putBoolean(BtNames.useTTS_SF, isChecked)
+            editor.putBoolean(useTTS_SF, isChecked)
             editor.apply()
 
             val intent =
@@ -144,6 +147,11 @@ class MainActivity : Activity() {
         } else
             startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
     }
+
+    private fun changeUseTTS(useTTS: Boolean) {
+        voiceSwitch?.isChecked = useTTS
+    }
+
 
     private fun openMusic() {
         val launchIntent = packageManager.getLaunchIntentForPackage("com.spotify.music")

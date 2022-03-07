@@ -1,4 +1,4 @@
-package com.katdmy.android.bluetoothspotify
+package com.katdmy.android.bluetoothspotify.services
 
 import android.app.*
 import android.bluetooth.BluetoothProfile
@@ -14,6 +14,9 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import androidx.preference.PreferenceManager
+import com.katdmy.android.bluetoothspotify.Constants.useTTS_SF
+import com.katdmy.android.bluetoothspotify.R
+import com.katdmy.android.bluetoothspotify.presentation.MainActivity
 
 
 class NotificationListener : NotificationListenerService() {
@@ -51,7 +54,7 @@ class NotificationListener : NotificationListenerService() {
                 build()
             }
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        useTTS = sharedPreferences.getBoolean(BtNames.useTTS_SF, false)
+        useTTS = sharedPreferences.getBoolean(useTTS_SF, false)
         listeningCommunicator = ListeningCommunicator()
 
         createNotification()
@@ -93,7 +96,7 @@ class NotificationListener : NotificationListenerService() {
         if (!useTTS) tts.stop()
 
         val editor = sharedPreferences.edit()
-        editor.putBoolean(BtNames.useTTS_SF, useTTS)
+        editor.putBoolean(useTTS_SF, useTTS)
         editor.apply()
 
         val switchTTSIntent = Intent("com.katdmy.android.bluetoothspotify")
@@ -213,7 +216,7 @@ class NotificationListener : NotificationListenerService() {
             if (command != null) {
                 Log.e(TAG, "command received:  $command")
                 if (intent.getStringExtra("command") == "onVoiceUseChange") {
-                    useTTS = sharedPreferences.getBoolean(BtNames.useTTS_SF, false)
+                    useTTS = sharedPreferences.getBoolean(useTTS_SF, false)
                     createNotification()
                     Log.d(this.javaClass.simpleName, "got from sharedPreferences: useTTS = $useTTS")
                 }

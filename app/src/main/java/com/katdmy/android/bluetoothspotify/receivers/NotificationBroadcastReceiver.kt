@@ -1,13 +1,11 @@
-package com.katdmy.android.bluetoothspotify
+package com.katdmy.android.bluetoothspotify.receivers
 
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 
 class NotificationBroadcastReceiver(
-    private val showNotificationData: (String) -> Unit,
-    private val stopTTS: () -> Unit,
-    private val startTTS: () -> Unit,
+    private var changeUseTTS: (Boolean) -> Unit
 ) : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
@@ -17,13 +15,10 @@ class NotificationBroadcastReceiver(
         val text = intent?.getStringExtra("Text") ?: ""
         val command = intent?.getStringExtra("command") ?: ""
 
-        if (packageName == "ru.alarmtrade.connect") {
-            if ((context?.applicationContext as MyApplication).isAppForeground())
-                showNotificationData("$packageName\n$key\n$title\n$text")
-        } else if (command == "onNotificationStopTTSClick") {
-            stopTTS()
+        if (command == "onNotificationStopTTSClick") {
+            changeUseTTS(false)
         } else if (command == "onNotificationStartTTSClick") {
-            startTTS()
+            changeUseTTS(true)
         }
     }
 }
