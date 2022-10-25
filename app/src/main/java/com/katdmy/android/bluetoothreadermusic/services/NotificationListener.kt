@@ -1,4 +1,4 @@
-package com.katdmy.android.bluetoothspotify.services
+package com.katdmy.android.bluetoothreadermusic.services
 
 import android.app.*
 import android.bluetooth.BluetoothProfile
@@ -14,9 +14,9 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import androidx.preference.PreferenceManager
-import com.katdmy.android.bluetoothspotify.Constants.useTTS_SF
-import com.katdmy.android.bluetoothspotify.R
-import com.katdmy.android.bluetoothspotify.presentation.MainActivity
+import com.katdmy.android.bluetoothreadermusic.Constants.useTTS_SF
+import com.katdmy.android.bluetoothreadermusic.presentation.MainActivity
+import com.katdmy.android.bluetoothreadermusic.R
 
 
 class NotificationListener : NotificationListenerService() {
@@ -60,9 +60,9 @@ class NotificationListener : NotificationListenerService() {
         createNotification()
 
         val notificationsIntentFilter = IntentFilter().apply {
-            addAction("com.katdmy.android.bluetoothspotify.notificationListenerServiceTTS")
-            addAction("com.katdmy.android.bluetoothspotify.notificationListenerService")
-            addAction("com.katdmy.android.bluetoothspotify.showNotificationWithError")
+            addAction("com.katdmy.android.bluetoothreadermusic.notificationListenerServiceTTS")
+            addAction("com.katdmy.android.bluetoothreadermusic.notificationListenerService")
+            addAction("com.katdmy.android.bluetoothreadermusic.showNotificationWithError")
             addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED")
         }
         registerReceiver(listeningCommunicator, notificationsIntentFilter)
@@ -99,7 +99,7 @@ class NotificationListener : NotificationListenerService() {
         editor.putBoolean(useTTS_SF, useTTS)
         editor.apply()
 
-        val switchTTSIntent = Intent("com.katdmy.android.bluetoothspotify")
+        val switchTTSIntent = Intent("com.katdmy.android.bluetoothreadermusic")
         if (useTTS) switchTTSIntent.putExtra("command", "onNotificationStartTTSClick")
         else switchTTSIntent.putExtra("command", "onNotificationStopTTSClick")
         context.sendBroadcast(switchTTSIntent)
@@ -110,7 +110,7 @@ class NotificationListener : NotificationListenerService() {
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        val intent = Intent("com.katdmy.android.bluetoothspotify")
+        val intent = Intent("com.katdmy.android.bluetoothreadermusic")
         intent.putExtra("Package Name", sbn?.packageName)
         intent.putExtra("Key", sbn?.key)
         intent.putExtra("Title", sbn?.notification?.extras?.getString("android.title"))
@@ -142,7 +142,7 @@ class NotificationListener : NotificationListenerService() {
             }
 
         val switchTTSIntent =
-            Intent("com.katdmy.android.bluetoothspotify.notificationListenerServiceTTS").apply {
+            Intent("com.katdmy.android.bluetoothreadermusic.notificationListenerServiceTTS").apply {
                 putExtra("command", "onNotificationSwitchTTSClick")
             }
         val switchTTSPendingIntent: PendingIntent =
@@ -156,7 +156,7 @@ class NotificationListener : NotificationListenerService() {
             .build()
 
         val stopServiceIntent =
-            Intent("com.katdmy.android.bluetoothspotify.notificationListenerService").apply {
+            Intent("com.katdmy.android.bluetoothreadermusic.notificationListenerService").apply {
                 putExtra("command", "stopServiceIntentClick")
             }
         val stopServicePendingIntent: PendingIntent =
@@ -202,7 +202,7 @@ class NotificationListener : NotificationListenerService() {
     }
 
     private fun openMusic() {
-        val launchIntent = packageManager.getLaunchIntentForPackage("com.spotify.music")
+        val launchIntent = packageManager.getLaunchIntentForPackage("ru.yandex.music")
         Log.e("openMusicService", launchIntent.toString())
         if (launchIntent != null)
             startActivity(launchIntent)

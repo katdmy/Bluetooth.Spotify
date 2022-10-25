@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.katdmy.android.bluetoothspotify">
+    package="com.katdmy.android.bluetoothreadermusic">
 
     <uses-permission android:name="android.permission.BLUETOOTH" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" />
@@ -17,7 +17,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.BluetoothSpotify">
+        android:theme="@style/Theme.BluetoothReaderMusic">
         <activity
             android:name=".presentation.MainActivity"
             android:exported="true">
@@ -39,6 +39,10 @@
         </service>
     </application>
     <queries>
+        <package android:name="ru.yandex.music" />
         <package android:name="com.spotify.music" />
+        <package android:name="com.google.android.apps.youtube.music" />
+        <package android:name="deezer.android.app" />
+        <package android:name="com.apple.android.music" />
     </queries>
 </manifest>

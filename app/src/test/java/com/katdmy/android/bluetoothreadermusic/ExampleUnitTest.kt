@@ -1,4 +1,4 @@
-package com.katdmy.android.lexusbluetoothspotify
+package com.katdmy.android.bluetoothreadermusic
 
 import org.junit.Test
 

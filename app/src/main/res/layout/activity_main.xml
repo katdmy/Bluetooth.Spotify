@@ -40,29 +40,6 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent" />
 
-    <Button
-        android:id="@+id/clear_btn"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="16dp"
-        android:layout_marginVertical="8dp"
-        android:text="@string/clear_view"
-        app:layout_constraintBottom_toTopOf="@id/open_music_btn"
-        app:layout_constraintEnd_toStartOf="@id/voice_sw"
-        app:layout_constraintStart_toStartOf="parent" />
-
-    <com.google.android.material.switchmaterial.SwitchMaterial
-        android:id="@+id/voice_sw"
-        android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:layout_marginVertical="16dp"
-        android:layout_marginHorizontal="16dp"
-        android:text="@string/text_to_voice"
-        android:textAppearance="?android:textAppearanceSmall"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@id/clear_btn" />
-
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
@@ -82,6 +59,46 @@
     </ScrollView>
 
     <Button
+        android:id="@+id/clear_btn"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginVertical="8dp"
+        android:text="@string/clear_view"
+        app:layout_constraintBottom_toTopOf="@id/music_app_spinner"
+        app:layout_constraintEnd_toStartOf="@id/voice_sw"
+        app:layout_constraintStart_toStartOf="parent" />
+
+    <TextView
+        android:id="@+id/music_app_tv"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:text="Music App"
+        app:layout_constraintBottom_toBottomOf="@id/music_app_spinner"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="@id/music_app_spinner" />
+
+    <Spinner
+        android:id="@+id/music_app_spinner"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        app:layout_constraintBottom_toTopOf="@id/open_music_btn"
+        app:layout_constraintEnd_toStartOf="@id/music_app_iv"
+        app:layout_constraintStart_toEndOf="@id/music_app_tv" />
+
+    <ImageView
+        android:id="@+id/music_app_iv"
+        android:layout_width="30dp"
+        android:layout_height="0dp"
+        android:layout_margin="10dp"
+        app:layout_constraintBottom_toTopOf="@id/open_music_btn"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/music_app_spinner"
+        app:layout_constraintTop_toBottomOf="@id/clear_btn" />
+
+    <Button
         android:id="@+id/open_music_btn"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -91,5 +108,17 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@id/voice_sw"
         app:layout_constraintStart_toStartOf="parent" />
+
+    <com.google.android.material.switchmaterial.SwitchMaterial
+        android:id="@+id/voice_sw"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="16dp"
+        android:layout_marginVertical="16dp"
+        android:text="@string/text_to_voice"
+        android:textAppearance="?android:textAppearanceSmall"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toEndOf="@id/clear_btn" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

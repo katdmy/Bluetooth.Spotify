@@ -1,4 +1,4 @@
-package com.katdmy.android.bluetoothspotify.receivers
+package com.katdmy.android.bluetoothreadermusic.receivers
 
 import android.content.BroadcastReceiver
 import android.content.Context

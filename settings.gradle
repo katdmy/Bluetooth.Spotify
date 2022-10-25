@@ -1,2 +1,2 @@
 include ':app'
-rootProject.name = "Bluetooth + Spotify"
+rootProject.name = "Bt Reader + Music"

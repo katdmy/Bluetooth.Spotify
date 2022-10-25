@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BT + Spotify</string>
+    <string name="app_name">BT Reader + Music</string>
     <string name="service_name">Notifications Listener</string>
     <string name="service_channel_name">Channel</string>
     <string name="service_channel_description">Channel description</string>
