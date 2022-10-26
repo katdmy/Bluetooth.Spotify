@@ -4,6 +4,7 @@ import android.app.Activity
 import android.bluetooth.BluetoothProfile
 import android.content.*
 import android.content.pm.PackageManager
+import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.util.Log
@@ -11,7 +12,8 @@ import android.view.View
 import android.widget.*
 import androidx.preference.PreferenceManager
 import com.google.android.material.switchmaterial.SwitchMaterial
-import com.katdmy.android.bluetoothreadermusic.Constants.useTTS_SF
+import com.katdmy.android.bluetoothreadermusic.Constants.MUSIC_PACKAGE_NAME
+import com.katdmy.android.bluetoothreadermusic.Constants.USE_TTS_SF
 import com.katdmy.android.bluetoothreadermusic.receivers.BtBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.receivers.NotificationBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.services.NotificationListener
@@ -35,8 +37,10 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
     private lateinit var btBroadcastReceiver: BtBroadcastReceiver
 
     private val installedMusicApps = ArrayList<MusicApp>()
+    private var currentMusicApp: MusicApp? = null
     private var useTTS: Boolean = false
     private lateinit var sharedPreferences: SharedPreferences
+    private lateinit var spEditor: SharedPreferences.Editor
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,6 +48,7 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
 
         sharedPreferences =
             PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        spEditor = sharedPreferences.edit()
 
         notificationBroadcastReceiver = NotificationBroadcastReceiver { changeUseTTS(useTTS) }
         btBroadcastReceiver = BtBroadcastReceiver { status -> showBtStatus(status) }
@@ -52,8 +57,7 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
         initMusicApps()
         setUpClickListeners()
         registerReceivers()
-        useTTS = sharedPreferences.getBoolean(useTTS_SF, false)
-
+        useTTS = sharedPreferences.getBoolean(USE_TTS_SF, false)
     }
 
     override fun onDestroy() {
@@ -93,11 +97,19 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
         )
         for (app in musicAppList) {
             if (isAppInstalled(app)) {
-                val ai = packageManager.getApplicationInfo(app, 0)
+                val ai = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    packageManager.getApplicationInfo(
+                        app,
+                        PackageManager.ApplicationInfoFlags.of(0)
+                    )
+                } else {
+                    @Suppress("DEPRECATION")
+                    packageManager.getApplicationInfo(app, 0)
+                }
                 val name = packageManager.getApplicationLabel(ai).toString()
                 val lauchIntent = packageManager.getLaunchIntentForPackage(app)
                 val icon = packageManager.getApplicationIcon(app)
-                installedMusicApps.add(MusicApp(name, lauchIntent, icon))
+                installedMusicApps.add(MusicApp(app, lauchIntent, name, icon))
             }
         }
         Log.e("InstalledMusicApps", installedMusicApps.toString())
@@ -106,11 +118,23 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
             ArrayAdapter(this, R.layout.music_app_list_item, installedMusicApps.map { it.name })
         musicAppSpinner?.adapter = adapter
         musicAppSpinner?.onItemSelectedListener = this
+
+        val currentMusicAppName = sharedPreferences.getString(MUSIC_PACKAGE_NAME, "")
+        if (currentMusicAppName != "") {
+            currentMusicApp =
+                installedMusicApps.firstOrNull { it.packageName == currentMusicAppName }
+            musicAppSpinner?.setSelection(installedMusicApps.indexOf(currentMusicApp))
+        }
     }
 
     private fun isAppInstalled(packageName: String): Boolean {
         return try {
-            packageManager.getPackageInfo(packageName, 0)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
+            } else {
+                @Suppress("DEPRECATION")
+                packageManager.getPackageInfo(packageName, 0)
+            }
             true
         } catch (e: PackageManager.NameNotFoundException) {
             false
@@ -150,7 +174,7 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
 
         voiceSwitch?.setOnCheckedChangeListener { _, isChecked ->
             val editor = sharedPreferences.edit()
-            editor.putBoolean(useTTS_SF, isChecked)
+            editor.putBoolean(USE_TTS_SF, isChecked)
             editor.apply()
 
             val intent =
@@ -160,7 +184,7 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
         }
 
         clearBtn?.setOnClickListener { tv?.text = "" }
-        openMusicBtn?.setOnClickListener { openMusic() }
+        openMusicBtn?.setOnClickListener { startActivity(currentMusicApp?.launchIntent) }
     }
 
     private fun isNotificationServiceRunning(): Boolean {
@@ -196,27 +220,20 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
         voiceSwitch?.isChecked = useTTS
     }
 
-
-    private fun openMusic() {
-        val launchIntent = packageManager.getLaunchIntentForPackage("ru.yandex.music")
-        Log.e("openMusicActivity", launchIntent.toString())
-        if (launchIntent != null)
-            startActivity(launchIntent)
-    }
-
     private fun showBtStatus(status: String) {
         BluetoothProfile.EXTRA_STATE
         btStatusTv?.text = "BT audio status: $status"
     }
 
-    override fun onItemSelected(parent: AdapterView<*>?, view: View?, pos: Int, id: Long) {
-        val currentPlayer = parent?.getItemAtPosition(pos)
-        val currentApp = installedMusicApps.firstOrNull { it.name == currentPlayer }
-        musicAppImageView?.setImageDrawable(currentApp?.icon)
+    override fun onItemSelected(parent: AdapterView<*>, view: View, pos: Int, id: Long) {
+        val currentPlayer = parent.getItemAtPosition(pos)
+        currentMusicApp = installedMusicApps.firstOrNull { it.name == currentPlayer }
+        musicAppImageView?.setImageDrawable(currentMusicApp?.icon)
+        spEditor.putString(MUSIC_PACKAGE_NAME, currentMusicApp?.packageName).apply()
     }
 
-    override fun onNothingSelected(parent: AdapterView<*>?) {
-        TODO("Not yet implemented")
+    override fun onNothingSelected(parent: AdapterView<*>) {
+        currentMusicApp = null
     }
 
 }

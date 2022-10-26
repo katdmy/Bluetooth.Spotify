@@ -14,7 +14,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import androidx.preference.PreferenceManager
-import com.katdmy.android.bluetoothreadermusic.Constants.useTTS_SF
+import com.katdmy.android.bluetoothreadermusic.Constants.USE_TTS_SF
 import com.katdmy.android.bluetoothreadermusic.presentation.MainActivity
 import com.katdmy.android.bluetoothreadermusic.R
 
@@ -54,7 +54,7 @@ class NotificationListener : NotificationListenerService() {
                 build()
             }
         sharedPreferences = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        useTTS = sharedPreferences.getBoolean(useTTS_SF, false)
+        useTTS = sharedPreferences.getBoolean(USE_TTS_SF, false)
         listeningCommunicator = ListeningCommunicator()
 
         createNotification()
@@ -70,18 +70,18 @@ class NotificationListener : NotificationListenerService() {
 
     private fun ttsInitialized() {
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-            override fun onStart(utteranceId: String?) {
+            override fun onStart(utteranceId: String) {
                 audioManager.requestAudioFocus(focusRequest)
             }
 
-            override fun onDone(utteranceId: String?) {
+            override fun onDone(utteranceId: String) {
                 audioManager.abandonAudioFocusRequest(focusRequest)
             }
 
-            override fun onError(utteranceId: String?) {
+            @Deprecated("Deprecated in Java")
+            override fun onError(p0: String) {
                 audioManager.abandonAudioFocusRequest(focusRequest)
             }
-
         })
     }
 
@@ -95,9 +95,8 @@ class NotificationListener : NotificationListenerService() {
         useTTS = status
         if (!useTTS) tts.stop()
 
-        val editor = sharedPreferences.edit()
-        editor.putBoolean(useTTS_SF, useTTS)
-        editor.apply()
+        val spEditor = sharedPreferences.edit()
+        spEditor.putBoolean(USE_TTS_SF, useTTS).apply()
 
         val switchTTSIntent = Intent("com.katdmy.android.bluetoothreadermusic")
         if (useTTS) switchTTSIntent.putExtra("command", "onNotificationStartTTSClick")
@@ -185,7 +184,7 @@ class NotificationListener : NotificationListenerService() {
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         mNotificationManager.notify(FOREGROUND_NOTIFICATION_ID, foregroundNotification)
 
-        stopForeground(false)
+        stopForeground(STOP_FOREGROUND_DETACH)
         startForeground(FOREGROUND_NOTIFICATION_ID, foregroundNotification)
     }
 
@@ -216,7 +215,7 @@ class NotificationListener : NotificationListenerService() {
             if (command != null) {
                 Log.e(TAG, "command received:  $command")
                 if (intent.getStringExtra("command") == "onVoiceUseChange") {
-                    useTTS = sharedPreferences.getBoolean(useTTS_SF, false)
+                    useTTS = sharedPreferences.getBoolean(USE_TTS_SF, false)
                     createNotification()
                     Log.d(this.javaClass.simpleName, "got from sharedPreferences: useTTS = $useTTS")
                 }
