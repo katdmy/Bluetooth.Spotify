@@ -184,7 +184,7 @@ class NotificationListener : NotificationListenerService() {
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         mNotificationManager.notify(FOREGROUND_NOTIFICATION_ID, foregroundNotification)
 
-        stopForeground(STOP_FOREGROUND_DETACH)
+        stopForeground(STOP_FOREGROUND_REMOVE)
         startForeground(FOREGROUND_NOTIFICATION_ID, foregroundNotification)
     }
 
