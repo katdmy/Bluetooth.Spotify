@@ -25,4 +25,6 @@
     <string name="startTTS">Start Audio</string>
     <string name="stopService">Stop service</string>
     <string name="text_to_voice">Text-to-voice</string>
+
+    <string name="bt_status">BT audio status: %1$s</string>
 </resources>

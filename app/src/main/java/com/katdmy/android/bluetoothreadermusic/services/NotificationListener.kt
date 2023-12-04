@@ -1,13 +1,16 @@
 package com.katdmy.android.bluetoothreadermusic.services
 
+import android.annotation.SuppressLint
 import android.app.*
 import android.bluetooth.BluetoothProfile
 import android.content.*
 import android.content.pm.PackageManager
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING
 import android.graphics.Color
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.os.Build
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.speech.tts.TextToSpeech
@@ -15,6 +18,7 @@ import android.speech.tts.UtteranceProgressListener
 import android.util.Log
 import androidx.preference.PreferenceManager
 import com.katdmy.android.bluetoothreadermusic.Constants.USE_TTS_SF
+import com.katdmy.android.bluetoothreadermusic.Constants.MUSIC_PACKAGE_NAME
 import com.katdmy.android.bluetoothreadermusic.presentation.MainActivity
 import com.katdmy.android.bluetoothreadermusic.R
 
@@ -65,7 +69,12 @@ class NotificationListener : NotificationListenerService() {
             addAction("com.katdmy.android.bluetoothreadermusic.showNotificationWithError")
             addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED")
         }
-        registerReceiver(listeningCommunicator, notificationsIntentFilter)
+        @SuppressLint("UnspecifiedRegisterReceiverFlag")
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(listeningCommunicator, notificationsIntentFilter, RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(listeningCommunicator, notificationsIntentFilter)
+        }
     }
 
     private fun ttsInitialized() {
@@ -112,14 +121,14 @@ class NotificationListener : NotificationListenerService() {
         val intent = Intent("com.katdmy.android.bluetoothreadermusic")
         intent.putExtra("Package Name", sbn?.packageName)
         intent.putExtra("Key", sbn?.key)
-        intent.putExtra("Title", sbn?.notification?.extras?.getString("android.title"))
-        intent.putExtra("Text", sbn?.notification?.extras?.getString("android.text"))
+        intent.putExtra("Title", sbn?.notification?.extras?.getCharSequence("android.title"))
+        intent.putExtra("Text", sbn?.notification?.extras?.getCharSequence("android.text"))
         sendBroadcast(intent)
 
         if (useTTS) {
             val key = sbn?.key
-            if ((key?.contains("0|com.whatsapp|1") == true && !key.contains("0|com.whatsapp|1|null"))
-                || packageName == "org.telegram.messenger"
+            //Log.e("NotificationListener", "Notification key: ${key}")
+            if (key?.contains("0|com.whatsapp|1") == true && !key.contains("0|com.whatsapp|1|null")
             ) {
                 val title = intent.getStringExtra("Title") ?: ""
                 val text = intent.getStringExtra("Text") ?: ""
@@ -133,7 +142,7 @@ class NotificationListener : NotificationListenerService() {
     }
 
     fun createNotification() {
-        val channelId = createNotificationChannel("my_service", "My Background Service")
+        val channelId = createNotificationChannel()
 
         val openActivityPendingIntent: PendingIntent =
             Intent(this, MainActivity::class.java).let { openActivityIntent ->
@@ -185,24 +194,28 @@ class NotificationListener : NotificationListenerService() {
         mNotificationManager.notify(FOREGROUND_NOTIFICATION_ID, foregroundNotification)
 
         stopForeground(STOP_FOREGROUND_REMOVE)
-        startForeground(FOREGROUND_NOTIFICATION_ID, foregroundNotification)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            startForeground(FOREGROUND_NOTIFICATION_ID, foregroundNotification, FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING)
+        } else {
+            startForeground(FOREGROUND_NOTIFICATION_ID, foregroundNotification)
+        }
     }
 
-    private fun createNotificationChannel(channelId: String, channelName: String): String {
+    private fun createNotificationChannel(): String {
         val chan = NotificationChannel(
-            channelId,
-            channelName, NotificationManager.IMPORTANCE_NONE
+            "my_service",
+            "My Background Service", NotificationManager.IMPORTANCE_NONE
         )
         chan.lightColor = Color.BLUE
         chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
         val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         service.createNotificationChannel(chan)
-        return channelId
+        return "my_service"
     }
 
     private fun openMusic() {
-        val launchIntent = packageManager.getLaunchIntentForPackage("ru.yandex.music")
-        Log.e("openMusicService", launchIntent.toString())
+        val selectedMusicApp = sharedPreferences.getString(MUSIC_PACKAGE_NAME, "") ?: ""
+        val launchIntent = packageManager.getLaunchIntentForPackage(selectedMusicApp)
         if (launchIntent != null)
             startActivity(launchIntent)
     }
@@ -238,8 +251,8 @@ class NotificationListener : NotificationListenerService() {
                 }
             } else {
                 when (intent.extras?.getInt(BluetoothProfile.EXTRA_STATE)) {
-                    BluetoothProfile.STATE_DISCONNECTED -> switchTTS(applicationContext, false)
-                    BluetoothProfile.STATE_CONNECTED -> switchTTS(applicationContext, true)
+                    BluetoothProfile.STATE_DISCONNECTED -> switchTTS(context, false)
+                    BluetoothProfile.STATE_CONNECTED -> switchTTS(context, true)
                 }
             }
         }

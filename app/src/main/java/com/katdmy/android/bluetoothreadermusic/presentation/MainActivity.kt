@@ -1,7 +1,8 @@
 package com.katdmy.android.bluetoothreadermusic.presentation
 
-import android.app.Activity
-import android.bluetooth.BluetoothProfile
+import android.Manifest
+import android.annotation.SuppressLint
+import android.app.AlertDialog
 import android.content.*
 import android.content.pm.PackageManager
 import android.os.Build
@@ -10,6 +11,11 @@ import android.provider.Settings
 import android.util.Log
 import android.view.View
 import android.widget.*
+import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts.*
+import androidx.annotation.RequiresApi
+import androidx.core.app.ActivityCompat
 import androidx.preference.PreferenceManager
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.katdmy.android.bluetoothreadermusic.Constants.MUSIC_PACKAGE_NAME
@@ -21,7 +27,7 @@ import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.musicApps.MusicApp
 
 
-class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
+class MainActivity : ComponentActivity(), AdapterView.OnItemSelectedListener {
 
     private var stopBtn: Button? = null
     private var startBtn: Button? = null
@@ -41,6 +47,7 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
     private var useTTS: Boolean = false
     private lateinit var sharedPreferences: SharedPreferences
     private lateinit var spEditor: SharedPreferences.Editor
+    private lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -56,7 +63,15 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
         initViews()
         initMusicApps()
         setUpClickListeners()
+        requestPermissionLauncher = registerForActivityResult(RequestMultiplePermissions()) { permissionAndGrant ->
+            if (permissionAndGrant.values.contains(false)) {
+                permissionAndGrant.forEach { (name: String, isGranted: Boolean) -> if (!isGranted) showNoPermissionDialog(name) }
+            }
+        }
         registerReceivers()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            checkPermissions()
+        }
         useTTS = sharedPreferences.getBoolean(USE_TTS_SF, false)
     }
 
@@ -103,7 +118,6 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
                         PackageManager.ApplicationInfoFlags.of(0)
                     )
                 } else {
-                    @Suppress("DEPRECATION")
                     packageManager.getApplicationInfo(app, 0)
                 }
                 val name = packageManager.getApplicationLabel(ai).toString()
@@ -132,7 +146,6 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 packageManager.getPackageInfo(packageName, PackageManager.PackageInfoFlags.of(0))
             } else {
-                @Suppress("DEPRECATION")
                 packageManager.getPackageInfo(packageName, 0)
             }
             true
@@ -153,7 +166,6 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
         }
 
         startBtn?.setOnClickListener {
-            //Log.e(this.javaClass.simpleName, "applicationContext: $applicationContext")
             packageManager.setComponentEnabledSetting(
                 ComponentName(
                     this,
@@ -195,25 +207,86 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
         )
     }
 
+    @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private fun registerReceivers() {
         if (Settings.Secure.getString(this.contentResolver, "enabled_notification_listeners")
-                .contains(
-                    applicationContext.packageName
-                )
+                .contains(applicationContext.packageName)
         ) {
             val notificationsIntentFilter = IntentFilter().apply {
                 addAction("com.katdmy.android.bluetoothreadermusic")
             }
-            registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter,
+                    RECEIVER_EXPORTED)
+            } else {
+                registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter)
+            }
 
             val btStatusIntentFilter = IntentFilter().apply {
                 addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED")
             }
-            registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                registerReceiver(btBroadcastReceiver, btStatusIntentFilter,
+                    RECEIVER_EXPORTED)
+            } else {
+                registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
+            }
 
             Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
         } else
             startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    private fun checkPermissions() {
+        when {
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED &&
+                    checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED -> {
+                    //tv?.text = "All permissions granted.\n" + tv?.text
+                }
+            ActivityCompat.shouldShowRequestPermissionRationale(
+                this, Manifest.permission.BLUETOOTH_CONNECT) -> {
+                // explain to the user why your app requires this permission and what features are disabled if it's declined
+                // include "cancel" button that lets the user continue without granting the permission
+                showRequestPermissionDialog()
+            }
+            ActivityCompat.shouldShowRequestPermissionRationale(
+                this, Manifest.permission.POST_NOTIFICATIONS) -> {
+                // explain to the user why your app requires this permission and what features are disabled if it's declined
+                // include "cancel" button that lets the user continue without granting the permission
+                showRequestPermissionDialog()
+            }
+            else -> {
+                // directly ask for the permission, registered ActivityResultCallback gets the result
+                requestPermissionLauncher.launch(arrayOf(
+                    Manifest.permission.POST_NOTIFICATIONS,
+                    Manifest.permission.BLUETOOTH_CONNECT
+                ))
+            }
+        }
+    }
+
+    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
+    fun showRequestPermissionDialog() {
+        AlertDialog.Builder(this)
+            .setTitle("Необходимы разрешения")
+            .setMessage("Для работы приложения требуются разрешение на показ уведомлений (для бесперебойной работы сервиса в фоне) и разрешение на чтение состояния подключения Bluetooth (для автоматического включения/выключения функции чтения сообщений)")
+            .setPositiveButton("Разрешить") { _, _ -> requestPermissionLauncher.launch(arrayOf(
+                Manifest.permission.POST_NOTIFICATIONS,
+                Manifest.permission.BLUETOOTH_CONNECT
+            )) }
+            .setNegativeButton("Запретить") { _, _ -> }
+            .create()
+            .show()
+    }
+
+    private fun showNoPermissionDialog(name: String) {
+        AlertDialog.Builder(this)
+            .setTitle("Отсутствует разрешение name")
+            //.setMessage("Сервис, гарантирующий работу приложения в фоне, может быть закрыт системой при нехватке памяти.")
+            .setMessage("Отсутвует необходимое для работы приложения разрешение:\n$name")
+            .create()
+            .show()
     }
 
     private fun changeUseTTS(useTTS: Boolean) {
@@ -221,8 +294,7 @@ class MainActivity : Activity(), AdapterView.OnItemSelectedListener {
     }
 
     private fun showBtStatus(status: String) {
-        BluetoothProfile.EXTRA_STATE
-        btStatusTv?.text = "BT audio status: $status"
+        btStatusTv?.text = getString(R.string.bt_status, status)
     }
 
     override fun onItemSelected(parent: AdapterView<*>, view: View, pos: Int, id: Long) {
