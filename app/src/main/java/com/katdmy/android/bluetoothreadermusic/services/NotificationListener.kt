@@ -133,7 +133,7 @@ class NotificationListener : NotificationListenerService() {
                 val title = intent.getStringExtra("Title") ?: ""
                 val text = intent.getStringExtra("Text") ?: ""
                 val data = "$title - $text"
-                if (data != lastReadData && sbn?.notification?.sortKey == "1") {
+                if (data != lastReadData && sbn.notification?.sortKey == "1") {
                     tts.speak(data, TextToSpeech.QUEUE_ADD, null, data)
                     lastReadData = data
                 }
