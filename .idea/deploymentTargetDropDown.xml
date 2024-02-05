@@ -2,6 +2,18 @@
 <project version="4">
   <component name="deploymentTargetDropDown">
     <value>
+      <entry key="AndroidDeveloperTestPreview">
+        <State />
+      </entry>
+      <entry key="CountrySelectionPreview">
+        <State />
+      </entry>
+      <entry key="ExposedDropdownMenuBoxPreview">
+        <State />
+      </entry>
+      <entry key="MainLayoutPreview">
+        <State />
+      </entry>
       <entry key="app">
         <State />
       </entry>

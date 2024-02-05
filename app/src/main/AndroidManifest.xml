@@ -12,6 +12,14 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
 
+    <queries>
+        <package android:name="ru.yandex.music" />
+        <package android:name="com.spotify.music" />
+        <package android:name="com.google.android.apps.youtube.music" />
+        <package android:name="deezer.android.app" />
+        <package android:name="com.apple.android.music" />
+    </queries>
+
     <application
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
@@ -20,33 +28,37 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.BluetoothReaderMusic">
         <activity
-            android:name=".presentation.MainActivity"
-            android:exported="true">
+            android:name=".presentation.ComposeActivity"
+            android:exported="true"
+            android:theme="@style/Theme.BluetoothReaderMusic">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
                 <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".presentation.MainActivity"
+            android:label="@string/title_activity_old"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
 
         <service
             android:name=".services.NotificationListener"
-            android:label="@string/service_name"
-            android:foregroundServiceType="specialUse"
             android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:label="@string/service_name"
             android:permission="android.permission.BIND_NOTIFICATION_LISTENER_SERVICE">
             <intent-filter>
                 <action android:name="android.service.notification.NotificationListenerService" />
             </intent-filter>
-            <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
                 android:value="service_reading_notifications_and_voiceover_chat_message_using_tts" />
         </service>
     </application>
-    <queries>
-        <package android:name="ru.yandex.music" />
-        <package android:name="com.spotify.music" />
-        <package android:name="com.google.android.apps.youtube.music" />
-        <package android:name="deezer.android.app" />
-        <package android:name="com.apple.android.music" />
-    </queries>
+
 </manifest>

@@ -24,7 +24,7 @@ import com.katdmy.android.bluetoothreadermusic.receivers.BtBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.receivers.NotificationBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.services.NotificationListener
 import com.katdmy.android.bluetoothreadermusic.R
-import com.katdmy.android.bluetoothreadermusic.musicApps.MusicApp
+import com.katdmy.android.bluetoothreadermusic.data.MusicApp
 
 
 class MainActivity : ComponentActivity(), AdapterView.OnItemSelectedListener {
@@ -57,8 +57,14 @@ class MainActivity : ComponentActivity(), AdapterView.OnItemSelectedListener {
             PreferenceManager.getDefaultSharedPreferences(applicationContext)
         spEditor = sharedPreferences.edit()
 
-        notificationBroadcastReceiver = NotificationBroadcastReceiver { changeUseTTS(useTTS) }
-        btBroadcastReceiver = BtBroadcastReceiver { status -> showBtStatus(status) }
+        notificationBroadcastReceiver = NotificationBroadcastReceiver(
+            changeUseTTS = { changeUseTTS(useTTS) },
+            addLogRecord = {}
+        )
+        btBroadcastReceiver = BtBroadcastReceiver(
+            changeUseTTS = { changeUseTTS(useTTS) },
+            changeConnectionStatus = { status -> showBtStatus(status) }
+        )
 
         initViews()
         initMusicApps()
@@ -185,13 +191,13 @@ class MainActivity : ComponentActivity(), AdapterView.OnItemSelectedListener {
         }
 
         voiceSwitch?.setOnCheckedChangeListener { _, isChecked ->
-            val editor = sharedPreferences.edit()
+            /*val editor = sharedPreferences.edit()
             editor.putBoolean(USE_TTS_SF, isChecked)
-            editor.apply()
+            editor.apply()*/
 
             val intent =
-                Intent("com.katdmy.android.bluetoothreadermusic.notificationListenerService")
-            intent.putExtra("command", "onVoiceUseChange")
+                Intent("com.katdmy.android.bluetoothreadermusic.onVoiceUseChange")
+            intent.putExtra("useTTS", isChecked)
             sendBroadcast(intent)
         }
 
@@ -239,30 +245,46 @@ class MainActivity : ComponentActivity(), AdapterView.OnItemSelectedListener {
 
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     private fun checkPermissions() {
-        when {
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED &&
-                    checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED -> {
-                    //tv?.text = "All permissions granted.\n" + tv?.text
-                }
-            ActivityCompat.shouldShowRequestPermissionRationale(
-                this, Manifest.permission.BLUETOOTH_CONNECT) -> {
-                // explain to the user why your app requires this permission and what features are disabled if it's declined
-                // include "cancel" button that lets the user continue without granting the permission
-                showRequestPermissionDialog()
-            }
+        val postNotificationPermissionGranted = when {
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED ->
+                true
             ActivityCompat.shouldShowRequestPermissionRationale(
                 this, Manifest.permission.POST_NOTIFICATIONS) -> {
                 // explain to the user why your app requires this permission and what features are disabled if it's declined
                 // include "cancel" button that lets the user continue without granting the permission
                 showRequestPermissionDialog()
+                true
             }
             else -> {
-                // directly ask for the permission, registered ActivityResultCallback gets the result
-                requestPermissionLauncher.launch(arrayOf(
-                    Manifest.permission.POST_NOTIFICATIONS,
-                    Manifest.permission.BLUETOOTH_CONNECT
-                ))
+                false
             }
+        }
+        val bluetoothConnentPermissionGranted = when {
+            checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED -> {
+                true
+            }
+            ActivityCompat.shouldShowRequestPermissionRationale(
+                this, Manifest.permission.BLUETOOTH_CONNECT) -> {
+                // explain to the user why your app requires this permission and what features are disabled if it's declined
+                // include "cancel" button that lets the user continue without granting the permission
+                showRequestPermissionDialog()
+                true
+            }
+            else -> {
+                false
+            }
+        }
+        if (!bluetoothConnentPermissionGranted && !postNotificationPermissionGranted)
+        // directly ask for the permission, registered ActivityResultCallback gets the result
+            requestPermissionLauncher.launch(arrayOf(
+                Manifest.permission.POST_NOTIFICATIONS,
+                Manifest.permission.BLUETOOTH_CONNECT
+            ))
+        else {
+            if (!bluetoothConnentPermissionGranted)
+                requestPermissionLauncher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
+            if (!postNotificationPermissionGranted)
+                requestPermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
         }
     }
 

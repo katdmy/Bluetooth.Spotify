@@ -27,4 +27,5 @@
     <string name="text_to_voice">Text-to-voice</string>
 
     <string name="bt_status">BT audio status: %1$s</string>
+    <string name="title_activity_old">Old View Activity</string>
 </resources>

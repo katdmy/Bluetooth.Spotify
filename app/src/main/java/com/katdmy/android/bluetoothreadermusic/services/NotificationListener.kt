@@ -5,7 +5,7 @@ import android.app.*
 import android.bluetooth.BluetoothProfile
 import android.content.*
 import android.content.pm.PackageManager
-import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING
+import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
 import android.graphics.Color
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
@@ -16,11 +16,8 @@ import android.service.notification.StatusBarNotification
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.util.Log
-import androidx.preference.PreferenceManager
-import com.katdmy.android.bluetoothreadermusic.Constants.USE_TTS_SF
-import com.katdmy.android.bluetoothreadermusic.Constants.MUSIC_PACKAGE_NAME
-import com.katdmy.android.bluetoothreadermusic.presentation.MainActivity
 import com.katdmy.android.bluetoothreadermusic.R
+import com.katdmy.android.bluetoothreadermusic.presentation.ComposeActivity
 
 
 class NotificationListener : NotificationListenerService() {
@@ -28,7 +25,7 @@ class NotificationListener : NotificationListenerService() {
     private val TAG = this.javaClass.simpleName
     private val FOREGROUND_NOTIFICATION_ID = 10001
     private var useTTS = false
-    private lateinit var sharedPreferences: SharedPreferences
+    //private lateinit var sharedPreferences: SharedPreferences
     private lateinit var listeningCommunicator: ListeningCommunicator
     private lateinit var tts: TextToSpeech
     private lateinit var audioManager: AudioManager
@@ -57,16 +54,18 @@ class NotificationListener : NotificationListenerService() {
                 })
                 build()
             }
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(applicationContext)
-        useTTS = sharedPreferences.getBoolean(USE_TTS_SF, false)
+        /*sharedPreferences = PreferenceManager.getDefaultSharedPreferences(applicationContext)
+        useTTS = sharedPreferences.getBoolean(USE_TTS_SF, false)*/
         listeningCommunicator = ListeningCommunicator()
 
-        createNotification()
+        createNotification(false)
 
         val notificationsIntentFilter = IntentFilter().apply {
-            addAction("com.katdmy.android.bluetoothreadermusic.notificationListenerServiceTTS")
-            addAction("com.katdmy.android.bluetoothreadermusic.notificationListenerService")
-            addAction("com.katdmy.android.bluetoothreadermusic.showNotificationWithError")
+            addAction("com.katdmy.android.bluetoothreadermusic.onVoiceUseChange")
+            addAction("com.katdmy.android.bluetoothreadermusic.onNotificationStopTTSClick")
+            addAction("com.katdmy.android.bluetoothreadermusic.onNotificationStartTTSClick")
+            addAction("com.katdmy.android.bluetoothreadermusic.stopServiceIntentClick")
+            addAction("com.katdmy.android.bluetoothreadermusic.DISMISSED_ACTION")
             addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED")
         }
         @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -99,31 +98,25 @@ class NotificationListener : NotificationListenerService() {
         super.onDestroy()
     }
 
-
-    fun switchTTS(context: Context, status: Boolean) {
-        useTTS = status
+    fun switchTTS(newUseTTS: Boolean) {
+        useTTS = newUseTTS
         if (!useTTS) tts.stop()
 
-        val spEditor = sharedPreferences.edit()
-        spEditor.putBoolean(USE_TTS_SF, useTTS).apply()
+/*        val spEditor = sharedPreferences.edit()
+        spEditor.putBoolean(USE_TTS_SF, useTTS).apply()*/
 
-        val switchTTSIntent = Intent("com.katdmy.android.bluetoothreadermusic")
-        if (useTTS) switchTTSIntent.putExtra("command", "onNotificationStartTTSClick")
-        else switchTTSIntent.putExtra("command", "onNotificationStopTTSClick")
-        context.sendBroadcast(switchTTSIntent)
-
-        createNotification()
-        if (status)
-            openMusic()
+        createNotification(useTTS)
+//        if (status)
+//            openMusic()
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
-        val intent = Intent("com.katdmy.android.bluetoothreadermusic")
+        val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
         intent.putExtra("Package Name", sbn?.packageName)
         intent.putExtra("Key", sbn?.key)
         intent.putExtra("Title", sbn?.notification?.extras?.getCharSequence("android.title"))
         intent.putExtra("Text", sbn?.notification?.extras?.getCharSequence("android.text"))
-        sendBroadcast(intent)
+        //sendBroadcast(intent)
 
         if (useTTS) {
             val key = sbn?.key
@@ -136,108 +129,121 @@ class NotificationListener : NotificationListenerService() {
                 if (data != lastReadData && sbn.notification?.sortKey == "1") {
                     tts.speak(data, TextToSpeech.QUEUE_ADD, null, data)
                     lastReadData = data
+                    intent.putExtra("Data", data)
+                    sendBroadcast(intent)
                 }
             }
         }
     }
 
-    fun createNotification() {
-        val channelId = createNotificationChannel()
+    fun createNotification(useTTS: Boolean) {
+        createNotificationChannel()
 
         val openActivityPendingIntent: PendingIntent =
-            Intent(this, MainActivity::class.java).let { openActivityIntent ->
+            Intent(this, ComposeActivity::class.java).let { openActivityIntent ->
                 PendingIntent.getActivity(this, 0, openActivityIntent, PendingIntent.FLAG_IMMUTABLE)
             }
 
-        val switchTTSIntent =
-            Intent("com.katdmy.android.bluetoothreadermusic.notificationListenerServiceTTS").apply {
-                putExtra("command", "onNotificationSwitchTTSClick")
-            }
+        // Need to change intent url in order to android can distinguish different intents
+        val switchTTSIntent = if (useTTS) {
+            Intent("com.katdmy.android.bluetoothreadermusic.onNotificationStopTTSClick")
+        } else {
+            Intent("com.katdmy.android.bluetoothreadermusic.onNotificationStartTTSClick")
+        }
         val switchTTSPendingIntent: PendingIntent =
             PendingIntent.getBroadcast(this, 0, switchTTSIntent, PendingIntent.FLAG_IMMUTABLE)
         val switchTTSAction: Notification.Action = Notification.Action.Builder(
-            null,
-            if (useTTS) getString(R.string.stopTTS)
-            else getString(R.string.startTTS),
-            switchTTSPendingIntent
-        )
+                null,
+                if (useTTS) getString(R.string.stopTTS)
+                else getString(R.string.startTTS),
+                switchTTSPendingIntent
+            )
             .build()
 
         val stopServiceIntent =
-            Intent("com.katdmy.android.bluetoothreadermusic.notificationListenerService").apply {
-                putExtra("command", "stopServiceIntentClick")
-            }
+            Intent("com.katdmy.android.bluetoothreadermusic.stopServiceIntentClick")
         val stopServicePendingIntent: PendingIntent =
             PendingIntent.getBroadcast(this, 0, stopServiceIntent, PendingIntent.FLAG_IMMUTABLE)
         val stopServiceAction: Notification.Action = Notification.Action.Builder(
-            null,
-            getString(R.string.stopService),
-            stopServicePendingIntent
-        )
+                null,
+                getString(R.string.stopService),
+                stopServicePendingIntent
+            )
             .build()
+
+        val dismissedIntent = Intent("com.katdmy.android.bluetoothreadermusic.DISMISSED_ACTION")
+        dismissedIntent.setPackage(packageName)
+        val dismissedPendingIntent: PendingIntent =
+            PendingIntent.getBroadcast(this, 0, dismissedIntent, PendingIntent.FLAG_IMMUTABLE)
 
         val icon = if (useTTS) R.drawable.ic_notifications
         else R.drawable.ic_outline_notifications
 
-        val foregroundNotification = Notification.Builder(this, channelId)
+        val foregroundNotification = Notification.Builder(this, "my_service")
             .setContentTitle(getText(R.string.notification_title))
             //.setContentText(getText(R.string.notification_message))
+            //.setContentText("useTTS: $useTTS")
             .setStyle(Notification.BigTextStyle().bigText(errorMessage))
             .setSmallIcon(icon)
             .setContentIntent(openActivityPendingIntent)
             .addAction(switchTTSAction)
             .addAction(stopServiceAction)
+            .setDeleteIntent(dismissedPendingIntent)
             .build()
 
         val mNotificationManager =
             getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         mNotificationManager.notify(FOREGROUND_NOTIFICATION_ID, foregroundNotification)
 
-        stopForeground(STOP_FOREGROUND_REMOVE)
+        //stopForeground(STOP_FOREGROUND_REMOVE)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            startForeground(FOREGROUND_NOTIFICATION_ID, foregroundNotification, FOREGROUND_SERVICE_TYPE_REMOTE_MESSAGING)
+            startForeground(FOREGROUND_NOTIFICATION_ID, foregroundNotification, FOREGROUND_SERVICE_TYPE_SPECIAL_USE)
         } else {
             startForeground(FOREGROUND_NOTIFICATION_ID, foregroundNotification)
         }
     }
 
-    private fun createNotificationChannel(): String {
+    private fun createNotificationChannel() {
         val chan = NotificationChannel(
             "my_service",
-            "My Background Service", NotificationManager.IMPORTANCE_NONE
+            "My Background Service",
+            NotificationManager.IMPORTANCE_LOW
         )
         chan.lightColor = Color.BLUE
         chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
         val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         service.createNotificationChannel(chan)
-        return "my_service"
     }
 
-    private fun openMusic() {
+/*    private fun openMusic() {
         val selectedMusicApp = sharedPreferences.getString(MUSIC_PACKAGE_NAME, "") ?: ""
         val launchIntent = packageManager.getLaunchIntentForPackage(selectedMusicApp)
         if (launchIntent != null)
             startActivity(launchIntent)
-    }
+    }*/
 
 
     inner class ListeningCommunicator : BroadcastReceiver() {
 
         override fun onReceive(context: Context, intent: Intent) {
-            val command = intent.getStringExtra("command")
-            if (command != null) {
-                Log.e(TAG, "command received:  $command")
-                if (intent.getStringExtra("command") == "onVoiceUseChange") {
-                    useTTS = sharedPreferences.getBoolean(USE_TTS_SF, false)
-                    createNotification()
-                    Log.d(this.javaClass.simpleName, "got from sharedPreferences: useTTS = $useTTS")
+
+            val command = intent.action?.split(".")?.last()
+            Log.e(TAG, "command received:  $command")
+            when(command) {
+                "onVoiceUseChange" -> {
+                    //useTTS = sharedPreferences.getBoolean(USE_TTS_SF, false)
+                    //Log.d(this.javaClass.simpleName, "got from sharedPreferences: useTTS = $newUseTTS")
+                    val newUseTTS = intent.getBooleanExtra("useTTS", false)
+                    switchTTS(newUseTTS)
+                    Log.e(TAG, "got from intent extras: useTTS = $newUseTTS")
                 }
-                if (intent.getStringExtra("command") == "onNotificationSwitchTTSClick") {
-                    useTTS = !useTTS
-                    createNotification()
-                    switchTTS(context, useTTS)
+                "onNotificationStopTTSClick" -> {
+                    switchTTS(false)
                 }
-                if (intent.getStringExtra("command") == "stopServiceIntentClick") {
+                "onNotificationStartTTSClick" -> {
+                    switchTTS(true)
+                }
+                "stopServiceIntentClick" -> {
                     val pm = context.packageManager
                     pm.setComponentEnabledSetting(
                         ComponentName(context, NotificationListener::class.java),
@@ -245,17 +251,24 @@ class NotificationListener : NotificationListenerService() {
                         PackageManager.DONT_KILL_APP
                     )
                 }
-                if (intent.getStringExtra("command") == "showNotificationWithError") {
+                "showNotificationWithError" -> {
                     errorMessage = intent.getStringExtra("errorMessage") ?: ""
-                    createNotification()
+                    createNotification(useTTS)
                 }
-            } else {
-                when (intent.extras?.getInt(BluetoothProfile.EXTRA_STATE)) {
-                    BluetoothProfile.STATE_DISCONNECTED -> switchTTS(context, false)
-                    BluetoothProfile.STATE_CONNECTED -> switchTTS(context, true)
+                "DISMISSED_ACTION" -> {
+                    createNotification(useTTS)
+                }
+                "CONNECTION_STATE_CHANGED" -> {
+                    when (intent.extras?.getInt(BluetoothProfile.EXTRA_STATE)) {
+                        BluetoothProfile.STATE_DISCONNECTED -> {
+                            switchTTS(false)
+                        }
+                        BluetoothProfile.STATE_CONNECTED -> {
+                            switchTTS(true)
+                        }
+                    }
                 }
             }
         }
     }
-
 }
