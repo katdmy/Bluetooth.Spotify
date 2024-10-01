@@ -1,4 +1,4 @@
-package com.katdmy.android.bluetoothreadermusic.presentation
+package com.katdmy.android.bluetoothreadermusic.ui
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-class ComposeViewModel : ViewModel() {
+class MainViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(MainUiModel())
     val uiState: StateFlow<MainUiModel> = _uiState.asStateFlow()
 
@@ -32,12 +32,6 @@ class ComposeViewModel : ViewModel() {
         }
     }
 
-    fun onChangeUseTTS(newUseTTS: Boolean) {
-        viewModelScope.launch {
-            _uiState.emit(_uiState.value.copy(useTTS = newUseTTS))
-        }
-    }
-
     fun onChangeBtStatus(newBtStatus: String) {
         viewModelScope.launch {
             _uiState.emit(_uiState.value.copy(btStatus = newBtStatus))
@@ -47,6 +41,14 @@ class ComposeViewModel : ViewModel() {
     fun onSelectMusicApp(newMusicApp: MusicApp) {
         viewModelScope.launch {
             _uiState.emit(_uiState.value.copy(selectedMusicApp = newMusicApp))
+        }
+    }
+
+    fun onSelectMusicAppByPackageName(newMusicAppPackageName: String?) {
+        viewModelScope.launch {
+            val newMusicApp = _uiState.value.installedMusicApps.find { it.packageName == newMusicAppPackageName }
+            if (newMusicApp != null)
+              _uiState.emit(_uiState.value.copy(selectedMusicApp = newMusicApp))
         }
     }
 }

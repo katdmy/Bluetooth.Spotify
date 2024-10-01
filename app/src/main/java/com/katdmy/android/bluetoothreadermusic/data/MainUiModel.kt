@@ -10,6 +10,5 @@ data class MainUiModel(
         launchIntent = null,
         name = "",
         icon = null
-    ),
-    var useTTS: Boolean = false
+    )
 )

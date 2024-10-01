@@ -28,20 +28,12 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.BluetoothReaderMusic">
         <activity
-            android:name=".presentation.ComposeActivity"
+            android:name=".ui.ComposeActivity"
             android:exported="true"
             android:theme="@style/Theme.BluetoothReaderMusic">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
-        </activity>
-        <activity
-            android:name=".presentation.MainActivity"
-            android:label="@string/title_activity_old"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
             </intent-filter>
         </activity>
 
