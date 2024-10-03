@@ -54,7 +54,7 @@ class NotificationListener : NotificationListenerService() {
             }
         }
 
-        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
+        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         focusRequest =
             AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE).run {
                 setAudioAttributes(AudioAttributes.Builder().run {
@@ -70,7 +70,7 @@ class NotificationListener : NotificationListenerService() {
         scope.launch {
             BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener)
                 .collectLatest { useTTS ->
-                    createNotification(useTTS ?: false)
+                    createNotification(useTTS == true)
                 }
         }
 
@@ -109,7 +109,7 @@ class NotificationListener : NotificationListenerService() {
 
     override fun onDestroy() {
         Log.e("NotificationListener", "onDestroy")
-        if (!scope.isActive) scope.cancel()
+        if (scope.isActive) scope.cancel()
         unregisterReceiver(listeningCommunicator)
         super.onDestroy()
     }
@@ -118,7 +118,7 @@ class NotificationListener : NotificationListenerService() {
         Log.e("NotificationListener", "switchTTS")
         if (!newUseTTS) {
             tts.stop()
-            if (!scope.isActive) scope.cancel()
+            if (scope.isActive) scope.cancel()
         }
 
         createNotification(newUseTTS)
@@ -149,8 +149,8 @@ class NotificationListener : NotificationListenerService() {
         //sendBroadcast(intent)
 
         if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
-        scope.launch {
-            BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener).collectLatest { useTTS ->
+            scope.launch {
+                BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener).collectLatest { useTTS ->
 
 //                if (!isNotificationActive()) createNotification(useTTS ?: false)
 
@@ -172,7 +172,6 @@ class NotificationListener : NotificationListenerService() {
                 }
             }
         }
-
     }
 
     fun createNotification(useTTS: Boolean) {
@@ -232,7 +231,7 @@ class NotificationListener : NotificationListenerService() {
             .build()
 
         val mNotificationManager =
-            getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+            getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         mNotificationManager.notify(FOREGROUND_NOTIFICATION_ID, foregroundNotification)
 
         //stopForeground(STOP_FOREGROUND_REMOVE)
@@ -251,7 +250,7 @@ class NotificationListener : NotificationListenerService() {
         )
         chan.lightColor = Color.BLUE
         chan.lockscreenVisibility = Notification.VISIBILITY_PRIVATE
-        val service = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val service = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
         service.createNotificationChannel(chan)
     }
 
@@ -269,7 +268,7 @@ class NotificationListener : NotificationListenerService() {
                     if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
                     scope.launch {
                         BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener).collectLatest { useTTS ->
-                            switchTTS(useTTS ?: false)
+                            switchTTS(useTTS == true)
                         }
                     }
                 }
@@ -278,7 +277,7 @@ class NotificationListener : NotificationListenerService() {
                     scope.launch {
                         BTRMDataStore.saveValue(false, USE_TTS_SF, this@NotificationListener)
                         BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener).collectLatest { useTTS ->
-                            switchTTS(useTTS ?: false)
+                            switchTTS(useTTS == true)
                         }
                     }
                 }
@@ -287,7 +286,7 @@ class NotificationListener : NotificationListenerService() {
                     scope.launch {
                         BTRMDataStore.saveValue(true, USE_TTS_SF, this@NotificationListener)
                         BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener).collectLatest { useTTS ->
-                            switchTTS(useTTS ?: false)
+                            switchTTS(useTTS == true)
                         }
                     }
                 }
@@ -328,7 +327,7 @@ class NotificationListener : NotificationListenerService() {
                             scope.launch {
                                 BTRMDataStore.saveValue(false, USE_TTS_SF, this@NotificationListener)
                                 BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener).collectLatest { useTTS ->
-                                    switchTTS(useTTS ?: false)
+                                    switchTTS(useTTS == true)
                                 }
                             }
                         }
@@ -337,7 +336,7 @@ class NotificationListener : NotificationListenerService() {
                             scope.launch {
                                 BTRMDataStore.saveValue(true, USE_TTS_SF, this@NotificationListener)
                                 BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener).collectLatest { useTTS ->
-                                    switchTTS(useTTS ?: false)
+                                    switchTTS(useTTS == true)
                                 }
                             }
                         }

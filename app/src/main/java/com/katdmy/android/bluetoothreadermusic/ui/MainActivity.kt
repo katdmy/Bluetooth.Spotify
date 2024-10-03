@@ -24,8 +24,10 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -38,9 +40,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
-import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -366,11 +369,11 @@ class ComposeActivity : ComponentActivity() {
     }
 
     private fun onChangeUseTTS(useTTS: Boolean) {
-        val intent =
-            Intent("com.katdmy.android.bluetoothreadermusic.onVoiceUseChange")
-        sendBroadcast(intent)
         lifecycleScope.launch {
             BTRMDataStore.saveValue(useTTS, USE_TTS_SF, this@ComposeActivity)
+            val intent =
+                Intent("com.katdmy.android.bluetoothreadermusic.onVoiceUseChange")
+            sendBroadcast(intent)
         }
     }
 
@@ -412,86 +415,6 @@ fun MainScreen(
     )
 }
 
-/*@Composable
-fun MainScreenLayout(
-    btStatus: String,
-    logMessages: String,
-    useTTS: Boolean,
-    installedMusicApps: ArrayList<MusicApp>,
-    selectedMusicApp: MusicApp,
-    onClearLog: () -> Unit,
-    onClickStopService: () -> Unit,
-    onClickStartService: () -> Unit,
-    onClickServiceStatus: () -> Unit,
-    onSelectMusicApp: (MusicApp) -> Unit,
-    onChangeUseTTS: (Boolean) -> Unit,
-    onClickOpenMusic: (launchMusicAppIntent: Intent?) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column(modifier = modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Row {
-            MyButton(text = "Stop Service", modifier = Modifier
-                .padding(end = 8.dp)
-                .weight(1f), onClickAction = onClickStopService)
-            MyButton(text = "Start Service", modifier = Modifier
-                .padding(start = 8.dp)
-                .weight(1f), onClickAction = onClickStartService)
-        }
-        MyButton(text = "Get Service Status", modifier = Modifier
-            .fillMaxWidth(), onClickAction = onClickServiceStatus)
-        Text(text = buildAnnotatedString {
-                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                    append("BT status: ")
-                }
-                append(btStatus)
-            },
-            modifier = Modifier.fillMaxWidth())
-        Text(text = buildAnnotatedString {
-                withStyle(SpanStyle(fontWeight = FontWeight.Bold)) {
-                    append("Log messages: \n")
-                }
-                append(logMessages)
-            },
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxWidth())
-        MyButton(
-            text = "Clear Log",
-            modifier = Modifier.fillMaxWidth(),
-            onClickAction = onClearLog )
-        MusicAppRow(
-            installedMusicApps = installedMusicApps,
-            selectedMusicApp = selectedMusicApp,
-            onSelectMusicApp = onSelectMusicApp,
-            modifier = Modifier.fillMaxWidth())
-        Row {
-            MyButton(
-                text = "Open Music App",
-                onClickAction = {onClickOpenMusic(selectedMusicApp.launchIntent)},
-                modifier = Modifier
-                    .padding(end = 8.dp)
-                    .weight(1f),
-                enabled = selectedMusicApp.launchIntent != null
-            )
-            Row(
-                Modifier
-                    .padding(start = 8.dp)
-                    .weight(1f),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Spacer(modifier = Modifier.weight(1f))
-                Text(text = "Text-to-Voice", modifier = Modifier.padding(horizontal = 8.dp))
-                Switch(
-                    checked = useTTS,
-                    onCheckedChange = {
-                        onChangeUseTTS(it)
-                    }
-                )
-            }
-        }
-    }
-}*/
-
 @Composable
 fun MainScreenLayout(
     btStatus: String,
@@ -521,34 +444,39 @@ fun MainScreenLayout(
             elevation = CardDefaults.elevatedCardElevation(4.dp)
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Service Controls",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Spacer(modifier = Modifier.height(8.dp))
                 Row {
                     MyButton(
-                        text = "Stop Service",
+                        text = "Stop",
                         modifier = Modifier
-                            .padding(end = 8.dp)
-                            .weight(1f),
+                            .weight(1f)
+                            .padding(end = 8.dp),
                         onClickAction = onClickStopService,
                         icon = ImageVector.vectorResource(R.drawable.ic_stop) // Добавляем иконку
 
                     )
                     MyButton(
-                        text = "Start Service",
+                        text = "Info",
                         modifier = Modifier
-                            .padding(start = 8.dp)
-                            .weight(1f),
+                            .weight(1f)
+                            .padding(horizontal = 8.dp),
+                        onClickAction = onClickServiceStatus,
+                        icon = Icons.Default.Info // Добавляем иконку
+                    )
+                    MyButton(
+                        text = "Start",
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(start = 8.dp),
                         onClickAction = onClickStartService,
                         icon = Icons.Default.PlayArrow // Добавляем иконку
                     )
                 }
-                // Секция для получения состояния сервиса
-                MyButton(
-                    text = "Get Service Status",
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(top = 8.dp),
-                    onClickAction = onClickServiceStatus,
-                    icon = Icons.Default.Info // Добавляем иконку
-                )
+
             }
         }
 
@@ -626,7 +554,9 @@ fun MainScreenLayout(
         ) {
             // Переключатель TTS
             Row(
-                modifier = Modifier.padding(8.dp).fillMaxWidth(),
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -673,54 +603,28 @@ fun MyButton(
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
-    Button(onClick = onClickAction, modifier = modifier, enabled=enabled) {
+    ElevatedButton(
+        onClick = onClickAction,
+        contentPadding = PaddingValues(),
+        enabled = enabled,
+        modifier = modifier.defaultMinSize(
+            minWidth = ButtonDefaults.MinWidth
+        )
+    ) {
         Row {
-            Icon(imageVector = icon, contentDescription = null)
-            Text(text = text, maxLines = 1, modifier = Modifier.align(Alignment.CenterVertically))
+            Icon(
+                imageVector = icon,
+                contentDescription = null
+            )
+            Spacer(modifier = Modifier.size(4.dp))
+            Text(
+                text = text,
+                maxLines = 1,
+                modifier = Modifier.align(Alignment.CenterVertically)
+            )
         }
-
     }
 }
-
-/*@Composable
-fun MusicAppRow(
-    installedMusicApps: ArrayList<MusicApp>,
-    selectedMusicApp: MusicApp,
-    onSelectMusicApp: (MusicApp) -> Unit,
-    onClickOpenMusic: (launchMusicAppIntent: Intent?) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Column {
-        Row(modifier = modifier) {
-            Text(text = "Music App", modifier = Modifier
-                .padding(end = 8.dp)
-                .align(Alignment.CenterVertically))
-            MusicAppSelection(
-                selectedMusicAppName = selectedMusicApp.name,
-                installedMusicApps = installedMusicApps,
-                onSelectMusicApp = onSelectMusicApp,
-                modifier = Modifier
-                    .weight(1f)
-                    .align(Alignment.CenterVertically)
-            )
-            Image(
-                painter = rememberDrawablePainter(drawable = selectedMusicApp.icon),
-                contentDescription = "music app icon",
-                modifier = Modifier
-                    .size(48.dp)
-                    .padding(start = 8.dp)
-                    .align(Alignment.CenterVertically)
-            )
-        }
-        MyButton(
-            text = "Open Music App",
-            onClickAction = { onClickOpenMusic(selectedMusicApp.launchIntent) },
-            modifier = Modifier.padding(end = 8.dp),
-            enabled = selectedMusicApp.launchIntent != null,
-            icon = ImageVector.vectorResource(R.drawable.ic_music_note) // Иконка музыкального приложения
-        )
-    }
-}*/
 
 @Composable
 fun MusicAppRow(
@@ -795,43 +699,3 @@ fun MusicAppCard(
         }
     }
 }
-
-/*
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun MusicAppSelection(
-    selectedMusicAppName: String,
-    installedMusicApps: ArrayList<MusicApp>,
-    onSelectMusicApp: (MusicApp) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    var expanded by remember { mutableStateOf(false) }
-    val onExpandedChange = { expanded = !expanded }
-
-    Box(modifier = modifier) {
-        OutlinedTextField(
-            enabled = false,
-            value = selectedMusicAppName,
-            onValueChange = { },
-            trailingIcon = {
-                ExposedDropdownMenuDefaults.TrailingIcon(
-                    expanded = expanded
-                )
-            },
-            modifier = Modifier.clickable { onExpandedChange() }
-        )
-        DropdownMenu(
-            expanded = expanded,
-            onDismissRequest = { expanded = false }
-        ) {
-            installedMusicApps.forEach { musicApp ->
-                DropdownMenuItem(
-                    onClick = {
-                        onSelectMusicApp(musicApp)
-                        expanded = false
-                    },
-                    text = { Text(text = musicApp.name) })
-            }
-        }
-    }
-}*/
