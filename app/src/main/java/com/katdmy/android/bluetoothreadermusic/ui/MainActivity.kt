@@ -35,7 +35,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
@@ -75,7 +77,6 @@ import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.BluetoothConnectionChecker
 import com.katdmy.android.bluetoothreadermusic.util.Constants.SERVICE_STARTED
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 class ComposeActivity : ComponentActivity() {
@@ -116,26 +117,24 @@ class ComposeActivity : ComponentActivity() {
             checkPermissions()
         }
         lifecycleScope.launch {
-            BTRMDataStore.getValueFlow(SERVICE_STARTED, this@ComposeActivity).collectLatest { servicePreviouslyStarted ->
-                if (servicePreviouslyStarted == true) {
-                    packageManager.setComponentEnabledSetting(
-                        ComponentName(
-                            this@ComposeActivity,
-                            NotificationListener::class.java
-                        ), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP
-                    )
-                    packageManager.setComponentEnabledSetting(
-                        ComponentName(
-                            this@ComposeActivity,
-                            NotificationListener::class.java
-                        ), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP
-                    )
+            val servicePreviouslyStarted = BTRMDataStore.getValue(SERVICE_STARTED, this@ComposeActivity)
+            if (servicePreviouslyStarted == true) {
+                packageManager.setComponentEnabledSetting(
+                    ComponentName(
+                        this@ComposeActivity,
+                        NotificationListener::class.java
+                    ), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP
+                )
+                packageManager.setComponentEnabledSetting(
+                    ComponentName(
+                        this@ComposeActivity,
+                        NotificationListener::class.java
+                    ), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP
+                )
 
-                    if (!isNotificationServiceRunning()) {
-                        startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                    }
+                if (!isNotificationServiceRunning()) {
+                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
                 }
-                Log.e("SERVICE_STARTED", servicePreviouslyStarted.toString())
             }
         }
 
@@ -195,9 +194,9 @@ class ComposeActivity : ComponentActivity() {
         Log.e("InstalledMusicApps", installedMusicApps.toString())
 
         lifecycleScope.launch {
-            BTRMDataStore.getValueFlow(MUSIC_PACKAGE_NAME, this@ComposeActivity).collectLatest { previouslySelectedMusicAppPackageName ->
-                viewModel.onSelectMusicAppByPackageName(previouslySelectedMusicAppPackageName)
-            }
+            val previouslySelectedMusicAppPackageName =
+                BTRMDataStore.getValue(MUSIC_PACKAGE_NAME, this@ComposeActivity)
+            viewModel.onSelectMusicAppByPackageName(previouslySelectedMusicAppPackageName)
         }
     }
 
@@ -209,38 +208,38 @@ class ComposeActivity : ComponentActivity() {
                 packageManager.getPackageInfo(packageName, 0)
             }
             true
-        } catch (e: PackageManager.NameNotFoundException) {
+        } catch (_: PackageManager.NameNotFoundException) {
             false
         }
     }
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private fun registerReceivers() {
+        val notificationsIntentFilter = IntentFilter().apply {
+            addAction("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter,
+                RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter)
+        }
+
+        val btStatusIntentFilter = IntentFilter().apply {
+            addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED")
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            registerReceiver(btBroadcastReceiver, btStatusIntentFilter,
+                RECEIVER_EXPORTED)
+        } else {
+            registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
+        }
+
         if (Settings.Secure.getString(this.contentResolver, "enabled_notification_listeners")
                 .contains(applicationContext.packageName)
-        ) {
-            val notificationsIntentFilter = IntentFilter().apply {
-                addAction("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter,
-                    RECEIVER_EXPORTED)
-            } else {
-                registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter)
-            }
-
-            val btStatusIntentFilter = IntentFilter().apply {
-                addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED")
-            }
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                registerReceiver(btBroadcastReceiver, btStatusIntentFilter,
-                    RECEIVER_EXPORTED)
-            } else {
-                registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
-            }
-
+        )
             Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
-        } else
+        else
             startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
     }
 
@@ -371,8 +370,7 @@ class ComposeActivity : ComponentActivity() {
     private fun onChangeUseTTS(useTTS: Boolean) {
         lifecycleScope.launch {
             BTRMDataStore.saveValue(useTTS, USE_TTS_SF, this@ComposeActivity)
-            val intent =
-                Intent("com.katdmy.android.bluetoothreadermusic.onVoiceUseChange")
+            val intent = Intent("com.katdmy.android.bluetoothreadermusic.onVoiceUseChange")
             sendBroadcast(intent)
         }
     }
@@ -402,7 +400,7 @@ fun MainScreen(
     MainScreenLayout(
         btStatus = state.value.btStatus,
         logMessages = state.value.logMessages,
-        useTTS = useTTS ?: false,
+        useTTS = useTTS == true,
         installedMusicApps = state.value.installedMusicApps,
         selectedMusicApp = state.value.selectedMusicApp,
         onClearLog = viewModel::onClearLogMessages,
@@ -517,7 +515,7 @@ fun MainScreenLayout(
                 Text(
                     text = logMessages,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())
                 )
                 // Кнопка очистки логов
                 MyButton(
@@ -527,24 +525,6 @@ fun MainScreenLayout(
                         .fillMaxWidth()
                         .padding(top = 8.dp),
                     icon = Icons.Default.Delete // Иконка удаления
-                )
-            }
-        }
-
-        // Секция выбора музыкального приложения
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.elevatedCardElevation(4.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(text = "Select Music App", style = MaterialTheme.typography.headlineSmall)
-                Spacer(modifier = Modifier.height(8.dp))
-                MusicAppRow(
-                    installedMusicApps = installedMusicApps,
-                    selectedMusicApp = selectedMusicApp,
-                    onSelectMusicApp = onSelectMusicApp,
-                    onClickOpenMusic = onClickOpenMusic,
-                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
@@ -569,6 +549,26 @@ fun MainScreenLayout(
                     checked = useTTS,
                     onCheckedChange = onChangeUseTTS
                 )
+            }
+        }
+
+        if (installedMusicApps.count() > 0) {
+            // Секция выбора музыкального приложения
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.elevatedCardElevation(4.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = "Select Music App", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    MusicAppRow(
+                        installedMusicApps = installedMusicApps,
+                        selectedMusicApp = selectedMusicApp,
+                        onSelectMusicApp = onSelectMusicApp,
+                        onClickOpenMusic = onClickOpenMusic,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
         }
     }

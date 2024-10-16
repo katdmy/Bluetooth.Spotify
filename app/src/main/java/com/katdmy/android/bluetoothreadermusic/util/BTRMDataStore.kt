@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.emptyPreferences
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 object BTRMDataStore {
@@ -34,4 +35,10 @@ object BTRMDataStore {
                     else -> throw exception
                 }
             }.map { readData -> readData[key] }
+
+    internal suspend fun <T> getValue(
+        key: Preferences.Key<T>,
+        context: Context
+    ): T? =
+        getValueFlow(key, context).first()
 }
