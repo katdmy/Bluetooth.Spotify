@@ -24,8 +24,8 @@ import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.job
 import kotlinx.coroutines.launch
 
 
@@ -67,12 +67,12 @@ class NotificationListener : NotificationListenerService() {
 
         if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
         scope.launch {
-            val useTTS = BTRMDataStore.getValue(USE_TTS_SF, this@NotificationListener)
-            createNotification(useTTS == true)
+            BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener).collectLatest {
+                useTTS -> createNotification(useTTS == true)
+            }
         }
 
         val notificationsIntentFilter = IntentFilter().apply {
-            addAction("com.katdmy.android.bluetoothreadermusic.onVoiceUseChange")
             addAction("com.katdmy.android.bluetoothreadermusic.onNotificationStopTTSClick")
             addAction("com.katdmy.android.bluetoothreadermusic.onNotificationStartTTSClick")
             addAction("com.katdmy.android.bluetoothreadermusic.stopServiceIntentClick")
@@ -266,27 +266,16 @@ class NotificationListener : NotificationListenerService() {
             val command = intent.action?.split(".")?.last()
             Log.e(TAG, "command received:  $command")
             when(command) {
-                "onVoiceUseChange" -> {
-                    if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
-                    scope.launch {
-                        val useTTS = BTRMDataStore.getValue(USE_TTS_SF, this@NotificationListener)
-                        switchTTS(useTTS == true)
-                    }
-                }
                 "onNotificationStopTTSClick" -> {
                     if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
                     scope.launch {
                         BTRMDataStore.saveValue(false, USE_TTS_SF, this@NotificationListener)
-                        val useTTS = BTRMDataStore.getValue(USE_TTS_SF, this@NotificationListener)
-                        switchTTS(useTTS == true)
                     }
                 }
                 "onNotificationStartTTSClick" -> {
                     if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
                     scope.launch {
                         BTRMDataStore.saveValue(true, USE_TTS_SF, this@NotificationListener)
-                        val useTTS = BTRMDataStore.getValue(USE_TTS_SF, this@NotificationListener)
-                        switchTTS(useTTS == true)
                     }
                 }
                 "stopServiceIntentClick" -> {
@@ -299,14 +288,14 @@ class NotificationListener : NotificationListenerService() {
                     if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
                     scope.launch {
                         BTRMDataStore.saveValue(false, SERVICE_STARTED, this@NotificationListener)
-                        this.coroutineContext.job.cancel()
                     }
+                    scope.cancel()
                 }
                 "DISMISSED_ACTION" -> {
                     if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
                     scope.launch {
                         val useTTS = BTRMDataStore.getValue(USE_TTS_SF, this@NotificationListener)
-                        if (useTTS == true) createNotification(useTTS)
+                        switchTTS(useTTS == true)
                     }
                 }
                 "CONNECTION_STATE_CHANGED" -> {
@@ -315,16 +304,12 @@ class NotificationListener : NotificationListenerService() {
                             if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
                             scope.launch {
                                 BTRMDataStore.saveValue(false, USE_TTS_SF, this@NotificationListener)
-                                val useTTS = BTRMDataStore.getValue(USE_TTS_SF, this@NotificationListener)
-                                switchTTS(useTTS == true)
                             }
                         }
                         BluetoothProfile.STATE_CONNECTED -> {
                             if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
                             scope.launch {
                                 BTRMDataStore.saveValue(true, USE_TTS_SF, this@NotificationListener)
-                                val useTTS = BTRMDataStore.getValue(USE_TTS_SF, this@NotificationListener)
-                                switchTTS(useTTS == true)
                             }
                         }
                     }

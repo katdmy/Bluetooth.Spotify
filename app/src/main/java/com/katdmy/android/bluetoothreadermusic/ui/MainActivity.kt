@@ -370,8 +370,6 @@ class ComposeActivity : ComponentActivity() {
     private fun onChangeUseTTS(useTTS: Boolean) {
         lifecycleScope.launch {
             BTRMDataStore.saveValue(useTTS, USE_TTS_SF, this@ComposeActivity)
-            val intent = Intent("com.katdmy.android.bluetoothreadermusic.onVoiceUseChange")
-            sendBroadcast(intent)
         }
     }
 
