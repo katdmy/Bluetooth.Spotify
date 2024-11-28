@@ -10,5 +10,7 @@ data class MainUiModel(
         launchIntent = null,
         name = "",
         icon = null
-    )
+    ),
+    var installedMessengerApps: ArrayList<MessengerApp> = arrayListOf(),
+    var settingsShown: Boolean = false
 )

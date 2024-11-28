@@ -3,6 +3,7 @@ package com.katdmy.android.bluetoothreadermusic.ui
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.katdmy.android.bluetoothreadermusic.data.MainUiModel
+import com.katdmy.android.bluetoothreadermusic.data.MessengerApp
 import com.katdmy.android.bluetoothreadermusic.data.MusicApp
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -16,6 +17,12 @@ class MainViewModel : ViewModel() {
     fun onSetInstalledMusicApps(newInstalledMusicApps: ArrayList<MusicApp>) {
         viewModelScope.launch {
             _uiState.emit(_uiState.value.copy(installedMusicApps = newInstalledMusicApps))
+        }
+    }
+
+    fun onSetInstalledMessengerApps(newInstalledMessengerApps: ArrayList<MessengerApp>) {
+        viewModelScope.launch {
+            _uiState.emit(_uiState.value.copy(installedMessengerApps = newInstalledMessengerApps))
         }
     }
 
@@ -49,6 +56,12 @@ class MainViewModel : ViewModel() {
             val newMusicApp = _uiState.value.installedMusicApps.find { it.packageName == newMusicAppPackageName }
             if (newMusicApp != null)
               _uiState.emit(_uiState.value.copy(selectedMusicApp = newMusicApp))
+        }
+    }
+
+    fun toggleSettingsShown() {
+        viewModelScope.launch {
+            _uiState.emit(_uiState.value.copy(settingsShown = !_uiState.value.settingsShown))
         }
     }
 }

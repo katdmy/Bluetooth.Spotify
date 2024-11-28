@@ -5,10 +5,10 @@ plugins {
 }
 
 android {
-    compileSdk 34
+    compileSdk 35
 
     defaultConfig {
-        applicationId "com.katdmy.android.lexusbluetoothreadermusic"
+        applicationId "com.katdmy.android.bluetoothreadermusic"
         minSdkVersion 29
         targetSdkVersion 34
         versionCode 1

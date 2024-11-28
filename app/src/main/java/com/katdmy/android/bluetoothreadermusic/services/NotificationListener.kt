@@ -19,8 +19,11 @@ import android.util.Log
 import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.ui.ComposeActivity
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
+import com.katdmy.android.bluetoothreadermusic.util.Constants.ENABLED_MESSENGERS
 import com.katdmy.android.bluetoothreadermusic.util.Constants.SERVICE_STARTED
+import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
+import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -38,6 +41,7 @@ class NotificationListener : NotificationListenerService() {
     private lateinit var audioManager: AudioManager
     private lateinit var focusRequest: AudioFocusRequest
     private var scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+    private var lastReadNotificationText: String = ""
 
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -77,6 +81,7 @@ class NotificationListener : NotificationListenerService() {
             addAction("com.katdmy.android.bluetoothreadermusic.onNotificationStartTTSClick")
             addAction("com.katdmy.android.bluetoothreadermusic.stopServiceIntentClick")
             addAction("com.katdmy.android.bluetoothreadermusic.getStatus")
+            addAction("com.katdmy.android.bluetoothreadermusic.abandonAudiofocus")
             addAction("com.katdmy.android.bluetoothreadermusic.DISMISSED_ACTION")
             addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED")
         }
@@ -149,6 +154,7 @@ class NotificationListener : NotificationListenerService() {
         val key = sbn?.key
         val title = sbn?.notification?.extras?.getCharSequence("android.title")
         val text = sbn?.notification?.extras?.getCharSequence("android.text")
+        val sortKey = sbn?.notification?.sortKey
         val data = "$title - $text"
 
         val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
@@ -156,25 +162,49 @@ class NotificationListener : NotificationListenerService() {
         intent.putExtra("Key", key)
         intent.putExtra("Title", title)
         intent.putExtra("Text", text)
-        //sendBroadcast(intent)
 
-        //Log.e("NotificationListener", "Notification key: ${key}")
-        if (key?.contains("0|com.whatsapp|1") == true && !key.contains("0|com.whatsapp|1|null")) {
+        if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
+        scope.launch {
+            val useTTS = BTRMDataStore.getValue(USE_TTS_SF, this@NotificationListener)
+            if (!isNotificationActive())
+                createNotification(useTTS == true)
 
-            if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
-            scope.launch {
-                val useTTS = BTRMDataStore.getValue(USE_TTS_SF, this@NotificationListener)
-
-                if (!isNotificationActive())  createNotification(useTTS == true)
-
-                if (useTTS == true) {
-                    if (sbn.notification?.sortKey == "1") {
-                        tts.speak(data, TextToSpeech.QUEUE_ADD, null, data)
-                        intent.putExtra("Data", data)
+            if (useTTS == true) {
+                val ttsMode = BTRMDataStore.getValue(TTS_MODE, this@NotificationListener)
+                when (ttsMode) {
+                    0 -> {
+                        // TODO: Необходимо исключить повторяющиеся уведомления и постоянные от всяких VPN
+                        if (packageName != applicationContext.packageName)
+                            readTTS(data)
+                        intent.putExtra("Data", "$packageName - $sortKey - $key - $title - $text")
                         sendBroadcast(intent)
                     }
+
+                    1 -> {
+                        val enabledMessengersList =
+                            BTRMDataStore.getValue(ENABLED_MESSENGERS, this@NotificationListener)
+                                ?.getList() ?: listOf()
+                        if (packageName in enabledMessengersList) {
+                            when (packageName) {
+                                "com.whatsapp" -> if (sortKey == "1") readTTS(data)
+                                "com.instagram.android" -> if (key?.contains("|direct|") == true) readTTS(data)
+                                else -> readTTS(data)
+                            }
+                            intent.putExtra("Data", "$packageName - $sortKey - $key - $title - $text")
+                            sendBroadcast(intent)
+                        }
+                    }
+
+                    else -> {}
                 }
             }
+        }
+    }
+
+    private fun readTTS(text: String) {
+        if (text != lastReadNotificationText) {
+            tts.speak(text, TextToSpeech.QUEUE_ADD, null, text)
+            lastReadNotificationText = text
         }
     }
 
@@ -290,6 +320,9 @@ class NotificationListener : NotificationListenerService() {
                         BTRMDataStore.saveValue(false, SERVICE_STARTED, this@NotificationListener)
                     }
                     scope.cancel()
+                }
+                "abandonAudiofocus" -> {
+                    audioManager.abandonAudioFocusRequest(focusRequest)
                 }
                 "DISMISSED_ACTION" -> {
                     if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)

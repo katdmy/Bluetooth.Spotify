@@ -42,20 +42,29 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ElevatedButton
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -69,14 +78,18 @@ import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.util.Constants.MUSIC_PACKAGE_NAME
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
-import com.katdmy.android.bluetoothreadermusic.data.MusicApp
+import com.katdmy.android.bluetoothreadermusic.data.*
 import com.katdmy.android.bluetoothreadermusic.receivers.BtBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.receivers.NotificationBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.services.NotificationListener
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.BluetoothConnectionChecker
+import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getList
+import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getString
+import com.katdmy.android.bluetoothreadermusic.util.Constants.ENABLED_MESSENGERS
 import com.katdmy.android.bluetoothreadermusic.util.Constants.SERVICE_STARTED
+import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
 import kotlinx.coroutines.launch
 
 class ComposeActivity : ComponentActivity() {
@@ -102,6 +115,7 @@ class ComposeActivity : ComponentActivity() {
         )
 
         initMusicApps(viewModel::onSetInstalledMusicApps)
+        initMessengerApps(viewModel::onSetInstalledMessengerApps)
         requestPermissionLauncher = registerForActivityResult(
                 ActivityResultContracts.RequestMultiplePermissions()) { permissionAndGrant ->
             if (permissionAndGrant.values.contains(false)) {
@@ -151,6 +165,9 @@ class ComposeActivity : ComponentActivity() {
                         ::onClickServiceStatus,
                         ::onSelectMusicApp,
                         ::onChangeUseTTS,
+                        ::onSetTtsMode,
+                        ::onCheckedChangeMessengerApp,
+                        ::onClickAbandonAudiofocus,
                         ::onClickOpenMusic
                     )
                 }
@@ -198,6 +215,40 @@ class ComposeActivity : ComponentActivity() {
                 BTRMDataStore.getValue(MUSIC_PACKAGE_NAME, this@ComposeActivity)
             viewModel.onSelectMusicAppByPackageName(previouslySelectedMusicAppPackageName)
         }
+    }
+
+    private fun initMessengerApps(setToModel: (ArrayList<MessengerApp>) -> Unit) {
+        val installedMessengerApps: ArrayList<MessengerApp> = arrayListOf()
+        installedMessengerApps.clear()
+        val messengerAppList = listOf(
+            "com.whatsapp",
+            "org.telegram.messenger",
+            "com.tencent.mm",
+            "com.instagram.android",
+            "com.google.android.apps.messaging"
+        )
+        for (app in messengerAppList) {
+            if (isAppInstalled(app)) {
+                val appInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    packageManager.getApplicationInfo(
+                        app,
+                        PackageManager.ApplicationInfoFlags.of(0)
+                    )
+                } else {
+                    packageManager.getApplicationInfo(app, 0)
+                }
+                val name = packageManager.getApplicationLabel(appInfo).toString()
+                val icon = packageManager.getApplicationIcon(app)
+                installedMessengerApps.add(
+                    MessengerApp(
+                        packageName = app,
+                        name = name,
+                        icon = icon
+                    ))
+            }
+        }
+        setToModel(installedMessengerApps)
+        Log.e("InstalledMessengerApps", installedMessengerApps.toString())
     }
 
     private fun isAppInstalled(packageName: String): Boolean {
@@ -373,8 +424,31 @@ class ComposeActivity : ComponentActivity() {
         }
     }
 
+    private fun onSetTtsMode(newTtsMode: Int) {
+        lifecycleScope.launch {
+            BTRMDataStore.saveValue(newTtsMode, TTS_MODE, this@ComposeActivity)
+        }
+    }
+
+    private fun onCheckedChangeMessengerApp(messengerAppPackageName: String, isChecked: Boolean) {
+        lifecycleScope.launch {
+            val enabledMessengersList = BTRMDataStore.getValue(ENABLED_MESSENGERS, this@ComposeActivity)?.getList() ?: listOf()
+            val newEnabledMessagesString = if (isChecked)
+                enabledMessengersList.plus(messengerAppPackageName).getString()
+            else
+                enabledMessengersList.filter { it != messengerAppPackageName }.getString()
+            BTRMDataStore.saveValue(newEnabledMessagesString, ENABLED_MESSENGERS, this@ComposeActivity)
+            Log.e("ENABLED_MESSENGERS", newEnabledMessagesString)
+        }
+    }
+
     private fun onClickOpenMusic(launchMusicAppIntent: Intent?) {
         launchMusicAppIntent?.let { startActivity(it) }
+    }
+
+    private fun onClickAbandonAudiofocus() {
+        val intent = Intent("com.katdmy.android.bluetoothreadermusic.abandonAudiofocus")
+        sendBroadcast(intent)
     }
 
     private fun getInitialBluetoothStatus(setToModel: (String) -> Unit) {
@@ -382,6 +456,7 @@ class ComposeActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
@@ -390,25 +465,165 @@ fun MainScreen(
     onClickServiceStatus: () -> Unit,
     onSelectMusicApp: (MusicApp) -> Unit,
     onChangeUseTTS: (Boolean) -> Unit,
+    onSetTtsMode: (Int) -> Unit,
+    onCheckedChangeMessengerApp: (String, Boolean) -> Unit,
+    onClickAbandonAudiofocus: () -> Unit,
     onClickOpenMusic: (launchMusicAppIntent: Intent?) -> Unit
 ) {
     val state = viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val useTTS by BTRMDataStore.getValueFlow(USE_TTS_SF, context).collectAsState(initial = false)
-    MainScreenLayout(
-        btStatus = state.value.btStatus,
-        logMessages = state.value.logMessages,
-        useTTS = useTTS == true,
-        installedMusicApps = state.value.installedMusicApps,
-        selectedMusicApp = state.value.selectedMusicApp,
-        onClearLog = viewModel::onClearLogMessages,
-        onClickStopService = onClickStopService,
-        onClickStartService = onClickStartService,
-        onClickServiceStatus = onClickServiceStatus,
-        onSelectMusicApp = onSelectMusicApp,
-        onChangeUseTTS = onChangeUseTTS,
-        onClickOpenMusic = onClickOpenMusic
-    )
+    val enabledMessengerString by BTRMDataStore.getValueFlow(ENABLED_MESSENGERS, context).collectAsState(initial = "")
+    val ttsModeSelection by BTRMDataStore.getValueFlow(TTS_MODE, context).collectAsState(initial = 0)
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text(
+                    if (state.value.settingsShown) "Settings"
+                        else "Bluetooth Notification Reader") },
+                actions = {
+                    IconButton(onClick = viewModel::toggleSettingsShown ) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Open/close settings"
+                        )
+                    }
+                }
+            )
+        }
+    ) { paddingValues ->
+        if (state.value.settingsShown)
+            SettingsScreenLayout(
+                ttsModeSelection = ttsModeSelection,
+                installedMessengers = state.value.installedMessengerApps,
+                enabledMessengerString = enabledMessengerString,
+                installedMusicApps = state.value.installedMusicApps,
+                selectedMusicApp = state.value.selectedMusicApp,
+                onSetTtsMode = onSetTtsMode,
+                onCheckedChangeMessengerApp = onCheckedChangeMessengerApp,
+                onSelectMusicApp = onSelectMusicApp,
+                onClickAbandonAudiofocus = onClickAbandonAudiofocus,
+                modifier = Modifier.padding(paddingValues)
+            )
+        else
+            MainScreenLayout(
+                btStatus = state.value.btStatus,
+                logMessages = state.value.logMessages,
+                selectedMusicApp = state.value.selectedMusicApp,
+                useTTS = useTTS == true,
+                onClearLog = viewModel::onClearLogMessages,
+                onClickStopService = onClickStopService,
+                onClickStartService = onClickStartService,
+                onClickServiceStatus = onClickServiceStatus,
+                onChangeUseTTS = onChangeUseTTS,
+                onClickOpenMusic = onClickOpenMusic,
+                modifier = Modifier.padding(paddingValues)
+            )
+    }
+}
+
+@Composable
+fun SettingsScreenLayout(
+    ttsModeSelection: Int?,
+    installedMessengers: ArrayList<MessengerApp>,
+    enabledMessengerString: String?,
+    installedMusicApps: ArrayList<MusicApp>,
+    selectedMusicApp: MusicApp,
+    onSetTtsMode: (Int) -> Unit,
+    onCheckedChangeMessengerApp: (String, Boolean) -> Unit,
+    onSelectMusicApp: (MusicApp) -> Unit,
+    onClickAbandonAudiofocus: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val options = listOf("All apps", "Messengers only")
+
+    // Используем фон, чтобы разделить карточки и создать ощущение глубины
+    Column(
+        modifier = modifier
+            .verticalScroll(rememberScrollState())
+            .background(MaterialTheme.colorScheme.background)
+            .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        // Секция переключения уведомлений по мессенджерам
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.elevatedCardElevation(4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = "Notification Select",
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                Spacer(modifier = Modifier.height(8.dp))
+                SingleChoiceSegmentedButtonRow(
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    options.forEachIndexed { index, label ->
+                        SegmentedButton(
+                            shape = SegmentedButtonDefaults.itemShape(
+                                index = index,
+                                count = options.size
+                            ),
+                            onClick = { onSetTtsMode(index) },
+                            selected = index == ttsModeSelection,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Text(label, maxLines = 1)
+                        }
+                    }
+                }
+
+                if (installedMessengers.count() > 0) {
+                    Spacer(modifier = Modifier.height(8.dp))
+                    MessengerAppColumn(
+                        installedMessengerApps = installedMessengers,
+                        enabledMessengerString = enabledMessengerString,
+                        enabled = ttsModeSelection == 1,
+                        onCheckedChangeMessengerApp = onCheckedChangeMessengerApp
+                    )
+                }
+            }
+        }
+
+        if (installedMusicApps.count() > 0) {
+            // Секция выбора музыкального приложения
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                elevation = CardDefaults.elevatedCardElevation(4.dp)
+            ) {
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Text(text = "Music App", style = MaterialTheme.typography.headlineSmall)
+                    Spacer(modifier = Modifier.height(8.dp))
+                    MusicAppRow(
+                        installedMusicApps = installedMusicApps,
+                        selectedMusicApp = selectedMusicApp,
+                        onSelectMusicApp = onSelectMusicApp,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
+            }
+        }
+
+        // Секция кнопки сброса аудиофокуса
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.elevatedCardElevation(4.dp)
+        ) {
+            MyButton(
+                text = "Abandon Audiofocus",
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                onClickAction = onClickAbandonAudiofocus,
+                icon = ImageVector.vectorResource(R.drawable.volume_up) // Добавляем иконку
+            )
+        }
+    }
 }
 
 @Composable
@@ -416,20 +631,17 @@ fun MainScreenLayout(
     btStatus: String,
     logMessages: String,
     useTTS: Boolean,
-    installedMusicApps: ArrayList<MusicApp>,
     selectedMusicApp: MusicApp,
     onClearLog: () -> Unit,
     onClickStopService: () -> Unit,
     onClickStartService: () -> Unit,
     onClickServiceStatus: () -> Unit,
-    onSelectMusicApp: (MusicApp) -> Unit,
     onChangeUseTTS: (Boolean) -> Unit,
     onClickOpenMusic: (launchMusicAppIntent: Intent?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     // Используем фон, чтобы разделить карточки и создать ощущение глубины
     Column(modifier = modifier
-        .padding(12.dp)
         .background(MaterialTheme.colorScheme.background)
         .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -453,7 +665,6 @@ fun MainScreenLayout(
                             .padding(end = 8.dp),
                         onClickAction = onClickStopService,
                         icon = ImageVector.vectorResource(R.drawable.ic_stop) // Добавляем иконку
-
                     )
                     MyButton(
                         text = "Info",
@@ -550,25 +761,57 @@ fun MainScreenLayout(
             }
         }
 
-        if (installedMusicApps.count() > 0) {
-            // Секция выбора музыкального приложения
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.elevatedCardElevation(4.dp)
+        // Кнопка открытия приложения
+        Card(
+            elevation = CardDefaults.elevatedCardElevation(4.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Select Music App", style = MaterialTheme.typography.headlineSmall)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    MusicAppRow(
-                        installedMusicApps = installedMusicApps,
-                        selectedMusicApp = selectedMusicApp,
-                        onSelectMusicApp = onSelectMusicApp,
-                        onClickOpenMusic = onClickOpenMusic,
-                        modifier = Modifier.fillMaxWidth()
-                    )
-                }
+                Text(
+                    text = "Music",
+                    style = MaterialTheme.typography.headlineSmall, // Красивый заголовок
+                    modifier = Modifier.padding(end = 12.dp)
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                MyButton(
+                    text = "Open ${selectedMusicApp.name}",
+                    onClickAction = { onClickOpenMusic(selectedMusicApp.launchIntent) },
+                    modifier = Modifier.weight(2f),
+                    enabled = selectedMusicApp.launchIntent != null,
+                    icon = ImageVector.vectorResource(R.drawable.ic_music_note)
+                )
             }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun SettingsLayoutPreview() {
+    BtReaderMusicTheme {
+        SettingsScreenLayout(
+            ttsModeSelection = 1,
+            installedMessengers = arrayListOf(
+                MessengerApp("org.whatsapp", "Whatsapp", null),
+                MessengerApp("org.telegram.messenger", "Telegram", null),
+            ),
+            enabledMessengerString = null,
+            installedMusicApps = arrayListOf(
+                MusicApp("ru.yandex.music", null, "Яндекс Музыка", null),
+                MusicApp("com.spotify.music", null, "Spotify", null),
+                MusicApp("com.google.android.apps.youtube.music", null, "Youtube Music", null)
+            ),
+            selectedMusicApp = MusicApp("", null, "", null),
+            onSetTtsMode = {},
+            onCheckedChangeMessengerApp = { _, _ -> },
+            onSelectMusicApp = {},
+            onClickAbandonAudiofocus = {}
+        )
     }
 }
 
@@ -580,14 +823,31 @@ fun MainLayoutPreview() {
             btStatus = "CONNECTED",
             logMessages = "",
             useTTS = false,
-            installedMusicApps = arrayListOf(),
-            selectedMusicApp = MusicApp("", null, "", null),
+            selectedMusicApp = MusicApp("com.spotify.music", null, "Spotify", null),
             onClearLog = {},
+            onClickStopService = {},
+            onClickStartService = {},
+            onClickServiceStatus = {},
+            onChangeUseTTS = {},
+            onClickOpenMusic = {}
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun MainScreenPreview() {
+    BtReaderMusicTheme {
+        MainScreen(
+            viewModel = MainViewModel(),
             onClickStopService = {},
             onClickStartService = {},
             onClickServiceStatus = {},
             onSelectMusicApp = {},
             onChangeUseTTS = {},
+            onSetTtsMode = {},
+            onCheckedChangeMessengerApp = { _, _ -> },
+            onClickAbandonAudiofocus = {},
             onClickOpenMusic = {}
         )
     }
@@ -629,7 +889,6 @@ fun MusicAppRow(
     installedMusicApps: ArrayList<MusicApp>,
     selectedMusicApp: MusicApp,
     onSelectMusicApp: (MusicApp) -> Unit,
-    onClickOpenMusic: (launchMusicAppIntent: Intent?) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Column(modifier = modifier.padding(8.dp)) {
@@ -645,17 +904,6 @@ fun MusicAppRow(
                 )
             }
         }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Кнопка открытия приложения
-        MyButton(
-            text = "Open ${selectedMusicApp.name}",
-            onClickAction = { onClickOpenMusic(selectedMusicApp.launchIntent) },
-            modifier = Modifier.fillMaxWidth(),
-            enabled = selectedMusicApp.launchIntent != null,
-            icon = ImageVector.vectorResource(R.drawable.ic_music_note)
-        )
     }
 }
 
@@ -693,6 +941,77 @@ fun MusicAppCard(
                 text = musicApp.name,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+fun MessengerAppColumn(
+    installedMessengerApps: ArrayList<MessengerApp>,
+    enabledMessengerString: String?,
+    enabled: Boolean,
+    onCheckedChangeMessengerApp: (String, Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(
+            text = "Messengers",
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.alpha(if (!enabled) 0.5f else 1f)
+        )
+        Spacer(modifier = Modifier.height(8.dp))
+        Column( // Вертикальный скролл для приложений
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            installedMessengerApps.forEach { messengerApp ->
+                MessengerAppCard(
+                    messengerApp = messengerApp,
+                    enabledMessengerString = enabledMessengerString,
+                    enabled = enabled,
+                    onCheckedChangeMessengerApp = onCheckedChangeMessengerApp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun MessengerAppCard(
+    messengerApp: MessengerApp,
+    enabledMessengerString: String?,
+    enabled: Boolean,
+    onCheckedChangeMessengerApp: (String, Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Card(
+        modifier = modifier.padding(4.dp),
+        elevation = CardDefaults.elevatedCardElevation(4.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Image(
+                painter = rememberDrawablePainter(drawable = messengerApp.icon),
+                contentDescription = "${messengerApp.name} icon",
+                modifier = Modifier.alpha(if (!enabled) 0.5f else 1f).size(48.dp).padding(6.dp)
+            )
+            Text(
+                text = messengerApp.name,
+                style = MaterialTheme.typography.bodyMedium,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.alpha(if (!enabled) 0.5f else 1f).padding(start = 4.dp)
+            )
+            Spacer(modifier = Modifier.weight(1f))
+            Switch(
+                checked = enabledMessengerString?.getList()?.contains(messengerApp.packageName) == true,
+                onCheckedChange = { checked: Boolean ->
+                    onCheckedChangeMessengerApp(messengerApp.packageName, checked)
+                },
+                enabled = enabled,
+                modifier = Modifier.padding(end = 12.dp)
             )
         }
     }
