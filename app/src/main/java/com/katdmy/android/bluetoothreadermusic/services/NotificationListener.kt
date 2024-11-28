@@ -173,7 +173,6 @@ class NotificationListener : NotificationListenerService() {
                 val ttsMode = BTRMDataStore.getValue(TTS_MODE, this@NotificationListener)
                 when (ttsMode) {
                     0 -> {
-                        // TODO: Необходимо исключить повторяющиеся уведомления и постоянные от всяких VPN
                         if (packageName != applicationContext.packageName)
                             readTTS(data)
                         intent.putExtra("Data", "$packageName - $sortKey - $key - $title - $text")
