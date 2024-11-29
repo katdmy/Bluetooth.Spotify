@@ -155,7 +155,6 @@ class NotificationListener : NotificationListenerService() {
         val title = sbn?.notification?.extras?.getCharSequence("android.title")
         val text = sbn?.notification?.extras?.getCharSequence("android.text")
         val sortKey = sbn?.notification?.sortKey
-        val data = "$title - $text"
 
         val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
         intent.putExtra("Package Name", packageName)
@@ -174,7 +173,7 @@ class NotificationListener : NotificationListenerService() {
                 when (ttsMode) {
                     0 -> {
                         if (packageName != applicationContext.packageName)
-                            readTTS(data)
+                            readTTS(title, text)
                         intent.putExtra("Data", "$packageName - $sortKey - $key - $title - $text")
                         sendBroadcast(intent)
                     }
@@ -185,9 +184,9 @@ class NotificationListener : NotificationListenerService() {
                                 ?.getList() ?: listOf()
                         if (packageName in enabledMessengersList) {
                             when (packageName) {
-                                "com.whatsapp" -> if (sortKey == "1") readTTS(data)
-                                "com.instagram.android" -> if (key?.contains("|direct|") == true) readTTS(data)
-                                else -> readTTS(data)
+                                "com.whatsapp" -> if (sortKey == "1") readTTS(title, text)
+                                "com.instagram.android" -> if (key?.contains("|direct|") == true) readTTS(title, text)
+                                else -> readTTS(title, text)
                             }
                             intent.putExtra("Data", "$packageName - $sortKey - $key - $title - $text")
                             sendBroadcast(intent)
@@ -200,10 +199,10 @@ class NotificationListener : NotificationListenerService() {
         }
     }
 
-    private fun readTTS(text: String) {
-        if (text != lastReadNotificationText) {
-            tts.speak(text, TextToSpeech.QUEUE_ADD, null, text)
-            lastReadNotificationText = text
+    private fun readTTS(title: CharSequence?, text: CharSequence?) {
+        if (text != lastReadNotificationText && (title != null || text != null)) {
+            tts.speak(text, TextToSpeech.QUEUE_ADD, null, "$title - $text")
+            lastReadNotificationText = "$title - $text"
         }
     }
 
