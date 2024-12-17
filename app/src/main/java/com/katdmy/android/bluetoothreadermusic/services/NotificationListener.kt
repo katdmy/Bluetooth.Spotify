@@ -20,6 +20,7 @@ import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.ui.ComposeActivity
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.Constants.ENABLED_MESSENGERS
+import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.SERVICE_STARTED
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
@@ -42,6 +43,7 @@ class NotificationListener : NotificationListenerService() {
     private lateinit var focusRequest: AudioFocusRequest
     private var scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
     private var lastReadNotificationText: String = ""
+    private var lastTelegramSortKey: Long = 0L
 
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -69,10 +71,12 @@ class NotificationListener : NotificationListenerService() {
             }
         listeningCommunicator = ListeningCommunicator()
 
-        if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
-        scope.launch {
-            BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener).collectLatest {
-                useTTS -> createNotification(useTTS == true)
+        //if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
+        //scope.launch {
+        CoroutineScope(Dispatchers.IO).launch {
+            BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener).collectLatest { useTTS ->
+                createNotification(useTTS == true)
+                switchTTS(useTTS == true)
             }
         }
 
@@ -186,6 +190,10 @@ class NotificationListener : NotificationListenerService() {
                             when (packageName) {
                                 "com.whatsapp" -> if (sortKey == "1") readTTS(title, text)
                                 "com.instagram.android" -> if (key?.contains("|direct|") == true) readTTS(title, text)
+                                "org.telegram.messenger" -> if (sortKey != null && sortKey.toLong() > lastTelegramSortKey) {
+                                    readTTS(title, text)
+                                    lastTelegramSortKey = sortKey.toLong()
+                                }
                                 else -> readTTS(title, text)
                             }
                             intent.putExtra("Data", "$packageName - $sortKey - $key - $title - $text")
@@ -200,9 +208,18 @@ class NotificationListener : NotificationListenerService() {
     }
 
     private fun readTTS(title: CharSequence?, text: CharSequence?) {
-        if (text != lastReadNotificationText && (title != null || text != null)) {
-            tts.speak(text, TextToSpeech.QUEUE_ADD, null, "$title - $text")
-            lastReadNotificationText = "$title - $text"
+        if ("$title - $text" != lastReadNotificationText && (title != null || text != null)) {
+            scope.launch {
+                val randomVoice = BTRMDataStore.getValue(RANDOM_VOICE, this@NotificationListener)
+                if (randomVoice == true) {
+                    tts.voice = tts.voices.random()
+                    tts.speak("$title - $text", TextToSpeech.QUEUE_ADD, null, "$title - $text")
+                    lastReadNotificationText = "$title - $text"
+                } else {
+                    tts.speak("$title - $text", TextToSpeech.QUEUE_ADD, null, "$title - $text")
+                    lastReadNotificationText = "$title - $text"
+                }
+            }
         }
     }
 

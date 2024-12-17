@@ -31,4 +31,9 @@ object Constants {
     ENABLED_MESSENGERS - string containing package names for chosen messengers
     */
     val ENABLED_MESSENGERS = stringPreferencesKey("ENABLED_MESSENGERS")
+
+    /*
+    RANDOM_VOICE - sets if TTS should use random voice instead of default one
+    */
+    val RANDOM_VOICE = booleanPreferencesKey("RANDOM_VOICE")
 }

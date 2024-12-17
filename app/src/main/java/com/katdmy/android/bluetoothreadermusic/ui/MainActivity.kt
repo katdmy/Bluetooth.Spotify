@@ -18,6 +18,14 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.SizeTransform
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -88,6 +96,7 @@ import com.katdmy.android.bluetoothreadermusic.util.BluetoothConnectionChecker
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getList
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getString
 import com.katdmy.android.bluetoothreadermusic.util.Constants.ENABLED_MESSENGERS
+import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.SERVICE_STARTED
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
 import kotlinx.coroutines.launch
@@ -167,6 +176,7 @@ class ComposeActivity : ComponentActivity() {
                         ::onChangeUseTTS,
                         ::onSetTtsMode,
                         ::onCheckedChangeMessengerApp,
+                        ::onSetRandomVoice,
                         ::onClickAbandonAudiofocus,
                         ::onClickOpenMusic
                     )
@@ -446,6 +456,12 @@ class ComposeActivity : ComponentActivity() {
         launchMusicAppIntent?.let { startActivity(it) }
     }
 
+    private fun onSetRandomVoice(newRandomVoice: Boolean) {
+        lifecycleScope.launch {
+            BTRMDataStore.saveValue(newRandomVoice, RANDOM_VOICE, this@ComposeActivity)
+        }
+    }
+
     private fun onClickAbandonAudiofocus() {
         val intent = Intent("com.katdmy.android.bluetoothreadermusic.abandonAudiofocus")
         sendBroadcast(intent)
@@ -456,7 +472,7 @@ class ComposeActivity : ComponentActivity() {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
@@ -467,6 +483,7 @@ fun MainScreen(
     onChangeUseTTS: (Boolean) -> Unit,
     onSetTtsMode: (Int) -> Unit,
     onCheckedChangeMessengerApp: (String, Boolean) -> Unit,
+    onSetRandomVoice: (Boolean) -> Unit,
     onClickAbandonAudiofocus: () -> Unit,
     onClickOpenMusic: (launchMusicAppIntent: Intent?) -> Unit
 ) {
@@ -475,13 +492,26 @@ fun MainScreen(
     val useTTS by BTRMDataStore.getValueFlow(USE_TTS_SF, context).collectAsState(initial = false)
     val enabledMessengerString by BTRMDataStore.getValueFlow(ENABLED_MESSENGERS, context).collectAsState(initial = "")
     val ttsModeSelection by BTRMDataStore.getValueFlow(TTS_MODE, context).collectAsState(initial = 0)
+    val randomVoice by BTRMDataStore.getValueFlow(RANDOM_VOICE, context).collectAsState(initial = false)
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(
-                    if (state.value.settingsShown) "Settings"
-                        else "Bluetooth Notification Reader") },
+                title = {
+                    AnimatedContent(
+                        targetState = state.value.settingsShown,
+                        transitionSpec = { slideInHorizontally { -it } + fadeIn() togetherWith
+                                slideOutHorizontally { it } + fadeOut() using
+                                SizeTransform(clip = false)
+                                         },
+                        label = "Screen Header"
+                    ) {
+                        when (it) {
+                            true -> { Text("Settings") }
+                            false -> { Text("Bluetooth Notification Reader") }
+                        }
+                    }
+                },
                 actions = {
                     IconButton(onClick = viewModel::toggleSettingsShown ) {
                         Icon(
@@ -493,33 +523,48 @@ fun MainScreen(
             )
         }
     ) { paddingValues ->
-        if (state.value.settingsShown)
-            SettingsScreenLayout(
-                ttsModeSelection = ttsModeSelection,
-                installedMessengers = state.value.installedMessengerApps,
-                enabledMessengerString = enabledMessengerString,
-                installedMusicApps = state.value.installedMusicApps,
-                selectedMusicApp = state.value.selectedMusicApp,
-                onSetTtsMode = onSetTtsMode,
-                onCheckedChangeMessengerApp = onCheckedChangeMessengerApp,
-                onSelectMusicApp = onSelectMusicApp,
-                onClickAbandonAudiofocus = onClickAbandonAudiofocus,
-                modifier = Modifier.padding(paddingValues)
-            )
-        else
-            MainScreenLayout(
-                btStatus = state.value.btStatus,
-                logMessages = state.value.logMessages,
-                selectedMusicApp = state.value.selectedMusicApp,
-                useTTS = useTTS == true,
-                onClearLog = viewModel::onClearLogMessages,
-                onClickStopService = onClickStopService,
-                onClickStartService = onClickStartService,
-                onClickServiceStatus = onClickServiceStatus,
-                onChangeUseTTS = onChangeUseTTS,
-                onClickOpenMusic = onClickOpenMusic,
-                modifier = Modifier.padding(paddingValues)
-            )
+        AnimatedContent(
+            targetState = state.value.settingsShown,
+            transitionSpec = { slideInHorizontally { -it } + fadeIn() togetherWith
+                    slideOutHorizontally { it } + fadeOut() using
+                    SizeTransform(clip = false)
+            },
+            label = "Screen Contents"
+        ) {
+            when (it) {
+                true -> {
+                    SettingsScreenLayout(
+                        ttsModeSelection = ttsModeSelection,
+                        installedMessengers = state.value.installedMessengerApps,
+                        enabledMessengerString = enabledMessengerString,
+                        installedMusicApps = state.value.installedMusicApps,
+                        selectedMusicApp = state.value.selectedMusicApp,
+                        randomVoice = randomVoice,
+                        onSetTtsMode = onSetTtsMode,
+                        onCheckedChangeMessengerApp = onCheckedChangeMessengerApp,
+                        onSelectMusicApp = onSelectMusicApp,
+                        onSetRandomVoice = onSetRandomVoice,
+                        onClickAbandonAudiofocus = onClickAbandonAudiofocus,
+                        modifier = Modifier.padding(paddingValues)
+                    )
+                }
+                false -> {
+                    MainScreenLayout(
+                        btStatus = state.value.btStatus,
+                        logMessages = state.value.logMessages,
+                        selectedMusicApp = state.value.selectedMusicApp,
+                        useTTS = useTTS == true,
+                        onClearLog = viewModel::onClearLogMessages,
+                        onClickStopService = onClickStopService,
+                        onClickStartService = onClickStartService,
+                        onClickServiceStatus = onClickServiceStatus,
+                        onChangeUseTTS = onChangeUseTTS,
+                        onClickOpenMusic = onClickOpenMusic,
+                        modifier = Modifier.padding(paddingValues)
+                    )
+                }
+            }
+        }
     }
 }
 
@@ -530,9 +575,11 @@ fun SettingsScreenLayout(
     enabledMessengerString: String?,
     installedMusicApps: ArrayList<MusicApp>,
     selectedMusicApp: MusicApp,
+    randomVoice: Boolean?,
     onSetTtsMode: (Int) -> Unit,
     onCheckedChangeMessengerApp: (String, Boolean) -> Unit,
     onSelectMusicApp: (MusicApp) -> Unit,
+    onSetRandomVoice: (Boolean) -> Unit,
     onClickAbandonAudiofocus: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -605,6 +652,29 @@ fun SettingsScreenLayout(
                         modifier = Modifier.fillMaxWidth()
                     )
                 }
+            }
+        }
+
+        Card(
+            elevation = CardDefaults.elevatedCardElevation(4.dp)
+        ) {
+            // Секция включения случайного голоса
+            Row(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Random Voice",
+                    style = MaterialTheme.typography.headlineSmall, // Красивый заголовок
+                    modifier = Modifier.padding(end = 12.dp)
+                )
+                Switch(
+                    checked = randomVoice == true,
+                    onCheckedChange = onSetRandomVoice
+                )
             }
         }
 
@@ -750,7 +820,7 @@ fun MainScreenLayout(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Text-to-Voice",
+                    text = "Text-to-Speech",
                     style = MaterialTheme.typography.headlineSmall, // Красивый заголовок
                     modifier = Modifier.padding(end = 12.dp)
                 )
@@ -806,10 +876,12 @@ fun SettingsLayoutPreview() {
                 MusicApp("com.spotify.music", null, "Spotify", null),
                 MusicApp("com.google.android.apps.youtube.music", null, "Youtube Music", null)
             ),
+            randomVoice = false,
             selectedMusicApp = MusicApp("", null, "", null),
             onSetTtsMode = {},
             onCheckedChangeMessengerApp = { _, _ -> },
             onSelectMusicApp = {},
+            onSetRandomVoice = {},
             onClickAbandonAudiofocus = {}
         )
     }
@@ -848,6 +920,7 @@ fun MainScreenPreview() {
             onSetTtsMode = {},
             onCheckedChangeMessengerApp = { _, _ -> },
             onClickAbandonAudiofocus = {},
+            onSetRandomVoice = {},
             onClickOpenMusic = {}
         )
     }
