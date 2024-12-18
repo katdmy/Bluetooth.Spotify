@@ -9,15 +9,7 @@ class NotificationBroadcastReceiver(
 ) : BroadcastReceiver() {
 
     override fun onReceive(context: Context?, intent: Intent?) {
-
-        val packageName = intent?.getStringExtra("Package Name") ?: ""
-        val key = intent?.getStringExtra("Key") ?: ""
-        val title = intent?.getStringExtra("Title") ?: ""
-        val text = intent?.getStringExtra("Text") ?: ""
-        val command = intent?.getStringExtra("command") ?: ""
-
         val data = intent?.getStringExtra("Data") ?: ""
         if (data != "") addLogRecord(data)
-
     }
 }
