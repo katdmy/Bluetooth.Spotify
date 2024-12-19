@@ -1,31 +1,46 @@
 <resources>
     <string name="app_name">BT Reader + Music</string>
     <string name="service_name">Notifications Listener</string>
-    <string name="service_channel_name">Channel</string>
-    <string name="service_channel_description">Channel description</string>
+    <string name="service_channel_name" translatable="false">notification_listener_service</string>
 
-    <string name="permission_dialog_explanation_text">To continue please grant access to BIND_NOTIFICATION_LISTENER_SERVICE</string>
-    <string name="permission_dialog_denied_text">This feature is not available without BIND_NOTIFICATION_LISTENER_SERVICE permissions. Open app settings?</string>
-    <string name="permission_not_granted_text">BIND_NOTIFICATION_LISTENER_SERVICE permission not granted</string>
-    <string name="dialog_positive_button">OK</string>
-    <string name="dialog_negative_button">Cancel</string>
-    <string name="create_notification_btn">Create notification</string>
+    <string name="permission_header">Permissions required</string>
+    <string name="permission_complete_rationale">Show notification (for service control) and Bluetooth state reading (for automatic turning on/off service) permissions are required.</string>
+    <string name="permission_enable">Enable</string>
+    <string name="permission_disable">Disable</string>
+    <string name="permission_required_header">Permission required</string>
+    <string name="permission_required">Permissions required for the app work are missing: %1%s</string>
 
-    <string name="service_status">Service is %s</string>
-    <string name="settings">Settings</string>
-    <string name="stop_service">Stop service</string>
-    <string name="start_service">Start service</string>
-    <string name="clear_view">Clear view</string>
-    <string name="connect_bta">Connect BTA</string>
-    <string name="open_music">Open music app</string>
-    <string name="notification_title">Notification Reader</string>
-    <string name="notification_message">Reading messages and connecting to BTA</string>
+    <string name="service_started">SERVICE STARTED</string>
+    <string name="service_stopped">SERVICE STOPPED</string>
+    <string name="settings_header">Settings</string>
+    <string name="main_screen_header">Bluetooth Notification Reader</string>
+
+    <string name="mode_switch_header">Notification Select</string>
+    <string name="mode_switch_allapps">All apps</string>
+    <string name="mode_switch_messengers">Messengers only</string>
+    <string name="music_app_header">Music app</string>
+    <string name="random_voice_header">Use Random Voice</string>
+    <string name="abandon_audiofocus">Abandon Audiofocus</string>
+
+    <string name="service_header">Service Controls</string>
+    <string name="service_stop">Stop</string>
+    <string name="service_info">Info</string>
+    <string name="service_start">Start</string>
+    <string name="bt_status">BT status</string>
+    <string name="log_messages">Log messages</string>
+    <string name="log_messages_clear">Clear Messages</string>
+    <string name="text_to_speech">Text-to-Speech</string>
+    <string name="music_header">Music</string>
+    <string name="music_open">Open %s</string>
 
     <string name="stopTTS">Stop Audio</string>
     <string name="startTTS">Start Audio</string>
     <string name="stopService">Stop service</string>
-    <string name="text_to_voice">Text-to-voice</string>
+    <string name="notification_title">Notification Reader</string>
 
-    <string name="bt_status">BT audio status: %1$s</string>
-    <string name="title_activity_old">Old View Activity</string>
+    <string name="bt_disconnected">DISCONNECTED</string>
+    <string name="bt_connecting">CONNECTING</string>
+    <string name="bt_connected">CONNECTED</string>
+    <string name="bt_disconnecting">DISCONNECTING</string>
+    <string name="bt_error">error</string>
 </resources>

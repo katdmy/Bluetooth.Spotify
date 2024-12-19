@@ -10,7 +10,7 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
-import android.util.Log
+//import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -76,6 +76,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
@@ -218,7 +219,7 @@ class ComposeActivity : ComponentActivity() {
             }
         }
         setToModel(installedMusicApps)
-        Log.e("InstalledMusicApps", installedMusicApps.toString())
+        //Log.e("InstalledMusicApps", installedMusicApps.toString())
 
         lifecycleScope.launch {
             val previouslySelectedMusicAppPackageName =
@@ -258,7 +259,7 @@ class ComposeActivity : ComponentActivity() {
             }
         }
         setToModel(installedMessengerApps)
-        Log.e("InstalledMessengerApps", installedMessengerApps.toString())
+        //Log.e("InstalledMessengerApps", installedMessengerApps.toString())
     }
 
     private fun isAppInstalled(packageName: String): Boolean {
@@ -355,22 +356,22 @@ class ComposeActivity : ComponentActivity() {
     @RequiresApi(Build.VERSION_CODES.TIRAMISU)
     fun showRequestPermissionDialog() {
         AlertDialog.Builder(this)
-            .setTitle("Необходимы разрешения")
-            .setMessage("Для работы приложения требуются разрешение на показ уведомлений (для бесперебойной работы сервиса в фоне) и разрешение на чтение состояния подключения Bluetooth (для автоматического включения/выключения функции чтения сообщений)")
-            .setPositiveButton("Разрешить") { _, _ -> requestPermissionLauncher.launch(arrayOf(
+            .setTitle(getString(R.string.permission_header))
+            .setMessage(getString(R.string.permission_complete_rationale))
+            .setPositiveButton(getString(R.string.permission_enable)) { _, _ -> requestPermissionLauncher.launch(arrayOf(
                 Manifest.permission.POST_NOTIFICATIONS,
                 Manifest.permission.BLUETOOTH_CONNECT
             )) }
-            .setNegativeButton("Запретить") { _, _ -> }
+            .setNegativeButton(getString(R.string.permission_disable)) { _, _ -> }
             .create()
             .show()
     }
 
+    @SuppressLint("StringFormatInvalid")
     private fun showNoPermissionDialog(name: String) {
         AlertDialog.Builder(this)
-            .setTitle("Отсутствует разрешение name")
-            //.setMessage("Сервис, гарантирующий работу приложения в фоне, может быть закрыт системой при нехватке памяти.")
-            .setMessage("Отсутвует необходимое для работы приложения разрешение:\n$name")
+            .setTitle(getString(R.string.permission_required_header))
+            .setMessage(getString(R.string.permission_required_header, name))
             .create()
             .show()
     }
@@ -417,7 +418,7 @@ class ComposeActivity : ComponentActivity() {
     }
 
     private fun onClickServiceStatus() {
-        val result = "SERVICE " + if (isNotificationServiceRunning()) "STARTED" else "STOPPED"
+        val result = if (isNotificationServiceRunning()) getString(R.string.service_started) else getString(R.string.service_stopped)
         Toast.makeText(this, result, Toast.LENGTH_SHORT).show()
     }
 
@@ -448,7 +449,7 @@ class ComposeActivity : ComponentActivity() {
             else
                 enabledMessengersList.filter { it != messengerAppPackageName }.getString()
             BTRMDataStore.saveValue(newEnabledMessagesString, ENABLED_MESSENGERS, this@ComposeActivity)
-            Log.e("ENABLED_MESSENGERS", newEnabledMessagesString)
+            //Log.e("ENABLED_MESSENGERS", newEnabledMessagesString)
         }
     }
 
@@ -507,8 +508,8 @@ fun MainScreen(
                         label = "Screen Header"
                     ) {
                         when (it) {
-                            true -> { Text("Settings") }
-                            false -> { Text("Bluetooth Notification Reader") }
+                            true -> { Text(stringResource(R.string.settings_header)) }
+                            false -> { Text(stringResource(R.string.main_screen_header)) }
                         }
                     }
                 },
@@ -583,7 +584,10 @@ fun SettingsScreenLayout(
     onClickAbandonAudiofocus: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val options = listOf("All apps", "Messengers only")
+    val options = listOf(
+        stringResource(R.string.mode_switch_allapps),
+        stringResource(R.string.mode_switch_messengers)
+    )
 
     // Используем фон, чтобы разделить карточки и создать ощущение глубины
     Column(
@@ -601,7 +605,7 @@ fun SettingsScreenLayout(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Notification Select",
+                    text = stringResource(R.string.mode_switch_header),
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -643,7 +647,7 @@ fun SettingsScreenLayout(
                 elevation = CardDefaults.elevatedCardElevation(4.dp)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = "Music App", style = MaterialTheme.typography.headlineSmall)
+                    Text(text = stringResource(R.string.music_app_header), style = MaterialTheme.typography.headlineSmall)
                     Spacer(modifier = Modifier.height(8.dp))
                     MusicAppRow(
                         installedMusicApps = installedMusicApps,
@@ -667,7 +671,7 @@ fun SettingsScreenLayout(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Random Voice",
+                    text = stringResource(R.string.random_voice_header),
                     style = MaterialTheme.typography.headlineSmall, // Красивый заголовок
                     modifier = Modifier.padding(end = 12.dp)
                 )
@@ -685,7 +689,7 @@ fun SettingsScreenLayout(
             elevation = CardDefaults.elevatedCardElevation(4.dp)
         ) {
             MyButton(
-                text = "Abandon Audiofocus",
+                text = stringResource(R.string.abandon_audiofocus),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
@@ -723,13 +727,13 @@ fun MainScreenLayout(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Service Controls",
+                    text = stringResource(R.string.service_header),
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row {
                     MyButton(
-                        text = "Stop",
+                        text = stringResource(R.string.service_stop),
                         modifier = Modifier
                             .weight(1f)
                             .padding(end = 8.dp),
@@ -737,7 +741,7 @@ fun MainScreenLayout(
                         icon = ImageVector.vectorResource(R.drawable.ic_stop) // Добавляем иконку
                     )
                     MyButton(
-                        text = "Info",
+                        text = stringResource(R.string.service_info),
                         modifier = Modifier
                             .weight(1f)
                             .padding(horizontal = 8.dp),
@@ -745,7 +749,7 @@ fun MainScreenLayout(
                         icon = Icons.Default.Info // Добавляем иконку
                     )
                     MyButton(
-                        text = "Start",
+                        text = stringResource(R.string.service_start),
                         modifier = Modifier
                             .weight(1f)
                             .padding(start = 8.dp),
@@ -767,7 +771,7 @@ fun MainScreenLayout(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "BT status",
+                    text = stringResource(R.string.bt_status),
                     style = MaterialTheme.typography.headlineSmall
                 ) // Заголовок крупнее
                 Spacer(modifier = Modifier.weight(1f))
@@ -787,7 +791,7 @@ fun MainScreenLayout(
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
                 Text(
-                    text = "Log messages",
+                    text = stringResource(R.string.log_messages),
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Spacer(modifier = Modifier.height(8.dp))
@@ -798,7 +802,7 @@ fun MainScreenLayout(
                 )
                 // Кнопка очистки логов
                 MyButton(
-                    text = "Clear Log",
+                    text = stringResource(R.string.log_messages_clear),
                     onClickAction = onClearLog,
                     modifier = Modifier
                         .fillMaxWidth()
@@ -820,7 +824,7 @@ fun MainScreenLayout(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Text-to-Speech",
+                    text = stringResource(R.string.text_to_speech),
                     style = MaterialTheme.typography.headlineSmall, // Красивый заголовок
                     modifier = Modifier.padding(end = 12.dp)
                 )
@@ -843,13 +847,13 @@ fun MainScreenLayout(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
-                    text = "Music",
+                    text = stringResource(R.string.music_header),
                     style = MaterialTheme.typography.headlineSmall, // Красивый заголовок
                     modifier = Modifier.padding(end = 12.dp)
                 )
                 Spacer(modifier = Modifier.weight(1f))
                 MyButton(
-                    text = "Open ${selectedMusicApp.name}",
+                    text = stringResource(R.string.music_open, selectedMusicApp.name),
                     onClickAction = { onClickOpenMusic(selectedMusicApp.launchIntent) },
                     modifier = Modifier.weight(2f),
                     enabled = selectedMusicApp.launchIntent != null,
@@ -909,6 +913,53 @@ fun MainLayoutPreview() {
 @Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {
+    BtReaderMusicTheme {
+        MainScreen(
+            viewModel = MainViewModel(),
+            onClickStopService = {},
+            onClickStartService = {},
+            onClickServiceStatus = {},
+            onSelectMusicApp = {},
+            onChangeUseTTS = {},
+            onSetTtsMode = {},
+            onCheckedChangeMessengerApp = { _, _ -> },
+            onClickAbandonAudiofocus = {},
+            onSetRandomVoice = {},
+            onClickOpenMusic = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, locale = "ru")
+@Composable
+fun SettingsLayoutPreviewInRussian() {
+    BtReaderMusicTheme {
+        SettingsScreenLayout(
+            ttsModeSelection = 1,
+            installedMessengers = arrayListOf(
+                MessengerApp("org.whatsapp", "Whatsapp", null),
+                MessengerApp("org.telegram.messenger", "Telegram", null),
+            ),
+            enabledMessengerString = null,
+            installedMusicApps = arrayListOf(
+                MusicApp("ru.yandex.music", null, "Яндекс Музыка", null),
+                MusicApp("com.spotify.music", null, "Spotify", null),
+                MusicApp("com.google.android.apps.youtube.music", null, "Youtube Music", null)
+            ),
+            randomVoice = false,
+            selectedMusicApp = MusicApp("", null, "", null),
+            onSetTtsMode = {},
+            onCheckedChangeMessengerApp = { _, _ -> },
+            onSelectMusicApp = {},
+            onSetRandomVoice = {},
+            onClickAbandonAudiofocus = {}
+        )
+    }
+}
+
+@Preview(showBackground = true, locale = "ru")
+@Composable
+fun MainScreenPreviewInRussian() {
     BtReaderMusicTheme {
         MainScreen(
             viewModel = MainViewModel(),

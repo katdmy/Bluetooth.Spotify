@@ -15,7 +15,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
-import android.util.Log
+//import android.util.Log
 import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.ui.ComposeActivity
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
@@ -38,7 +38,7 @@ import java.util.Locale
 
 class NotificationListener : NotificationListenerService() {
 
-    private val TAG = this.javaClass.simpleName
+    //private val TAG = this.javaClass.simpleName
     private val FOREGROUND_NOTIFICATION_ID = 10001
     private lateinit var listeningCommunicator: ListeningCommunicator
     private lateinit var tts: TextToSpeech
@@ -176,7 +176,7 @@ class NotificationListener : NotificationListenerService() {
                     0 -> {
                         if (packageName != applicationContext.packageName) {
                             mutex.withLock {
-                                readTTS(packageName, sortKey, key, title, text)
+                                readTTS(title, text)
                             }
                         }
                     }
@@ -186,14 +186,14 @@ class NotificationListener : NotificationListenerService() {
                                 ?.getList() ?: listOf()
                         if (packageName in enabledMessengersList) {
                             when (packageName) {
-                                "com.whatsapp" -> if (sortKey == "1") readTTS(packageName, sortKey, key, title, text)
-                                "com.instagram.android" -> if (key?.contains("|direct|") == true) readTTS(packageName, sortKey, key, title, text)
+                                "com.whatsapp" -> if (sortKey == "1") readTTS(title, text)
+                                "com.instagram.android" -> if (key?.contains("|direct|") == true) readTTS(title, text)
                                 "org.telegram.messenger" -> if (sortKey != null && sortKey.toLong() > lastTelegramSortKey) {
-                                    readTTS(packageName, sortKey, key, title, text)
+                                    readTTS(title, text)
                                     lastTelegramSortKey = sortKey.toLong()
                                 }
 
-                                else -> readTTS(packageName, sortKey, key, title, text)
+                                else -> readTTS(title, text)
                             }
                         }
                     }
@@ -204,7 +204,7 @@ class NotificationListener : NotificationListenerService() {
         }
     }
 
-    private fun readTTS(packageName: String?, sortKey: String?, key: String?, title: CharSequence?, text: CharSequence?) {
+    private fun readTTS(title: CharSequence?, text: CharSequence?) {
         if ("$title - $text" != lastReadNotificationText && (title != null || text != null)) {
             lastReadNotificationText = "$title - $text"
             scope.launch {
@@ -220,7 +220,7 @@ class NotificationListener : NotificationListenerService() {
             }
 
             val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-            intent.putExtra("Data", "$packageName - $sortKey - $key - $title - $text")
+            intent.putExtra("Data", "$title - $text")
             sendBroadcast(intent)
         }
     }
@@ -269,10 +269,8 @@ class NotificationListener : NotificationListenerService() {
         val icon = if (useTTS) R.drawable.ic_notifications
         else R.drawable.ic_outline_notifications
 
-        val foregroundNotification = Notification.Builder(this, "my_service")
+        val foregroundNotification = Notification.Builder(this, "notification_reader_service")
             .setContentTitle(getText(R.string.notification_title))
-            //.setContentText(getText(R.string.notification_message))
-            //.setContentText("useTTS: $useTTS")
             .setSmallIcon(icon)
             .setContentIntent(openActivityPendingIntent)
             .addAction(switchTTSAction)
@@ -294,8 +292,8 @@ class NotificationListener : NotificationListenerService() {
 
     private fun createNotificationChannel() {
         val chan = NotificationChannel(
-            "my_service",
-            "My Background Service",
+            "notification_reader_service",
+            getString(R.string.service_channel_name),
             NotificationManager.IMPORTANCE_LOW
         )
         chan.lightColor = Color.BLUE
