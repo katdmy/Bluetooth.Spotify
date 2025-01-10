@@ -36,7 +36,8 @@
     <string name="stopTTS">Stop Audio</string>
     <string name="startTTS">Start Audio</string>
     <string name="stopService">Stop service</string>
-    <string name="notification_title">Notification Reader</string>
+    <string name="notification_title_tts_on">Awaiting Notifications</string>
+    <string name="notification_title_tts_off">Reader is inactive</string>
 
     <string name="bt_disconnected">DISCONNECTED</string>
     <string name="bt_connecting">CONNECTING</string>

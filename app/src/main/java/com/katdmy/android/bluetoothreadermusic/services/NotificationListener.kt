@@ -266,11 +266,14 @@ class NotificationListener : NotificationListenerService() {
         val dismissedPendingIntent: PendingIntent =
             PendingIntent.getBroadcast(this, 0, dismissedIntent, PendingIntent.FLAG_IMMUTABLE)
 
+        val contentTitle = if (useTTS) getText(R.string.notification_title_tts_on)
+            else getText(R.string.notification_title_tts_off)
+
         val icon = if (useTTS) R.drawable.ic_notifications
-        else R.drawable.ic_outline_notifications
+            else R.drawable.ic_outline_notifications
 
         val foregroundNotification = Notification.Builder(this, "notification_reader_service")
-            .setContentTitle(getText(R.string.notification_title))
+            .setContentTitle(contentTitle)
             .setSmallIcon(icon)
             .setContentIntent(openActivityPendingIntent)
             .addAction(switchTTSAction)

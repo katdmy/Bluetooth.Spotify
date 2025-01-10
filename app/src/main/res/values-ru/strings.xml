@@ -31,7 +31,8 @@
     <string name="stopTTS">Остановить чтение</string>
     <string name="startTTS">Начать чтение</string>
     <string name="stopService">Выключить сервис</string>
-    <string name="notification_title">Ожидание уведомлений</string>
+    <string name="notification_title_tts_on">Ожидание уведомлений</string>
+    <string name="notification_title_tts_off">Сервис неактивен</string>
     <string name="bt_disconnected">ОТКЛЮЧЕН</string>
     <string name="bt_connecting">ПОДКЛЮЧЕНИЕ</string>
     <string name="bt_connected">ПОДКЛЮЧЕН</string>
