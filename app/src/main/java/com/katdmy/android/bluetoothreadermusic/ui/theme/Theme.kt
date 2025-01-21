@@ -2,6 +2,8 @@ package com.katdmy.android.bluetoothreadermusic.ui.theme
 
 import android.app.Activity
 import android.os.Build
+import android.view.Window
+import android.view.WindowInsets
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -57,7 +59,7 @@ fun BtReaderMusicTheme(
     if (!view.isInEditMode) {
         SideEffect {
             val window = (view.context as Activity).window
-            window.statusBarColor = colorScheme.primary.toArgb()
+            setStatusBarColor(window, colorScheme.primary.toArgb())
             WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = darkTheme
         }
     }
@@ -67,4 +69,21 @@ fun BtReaderMusicTheme(
         typography = Typography,
         content = content
     )
+}
+
+fun setStatusBarColor(window: Window, color: Int) {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) { // Android 15+
+        window.decorView.setOnApplyWindowInsetsListener { view, insets ->
+            val statusBarInsets = insets.getInsets(WindowInsets.Type.statusBars())
+            view.setBackgroundColor(color)
+
+            // Adjust padding to avoid overlap
+            view.setPadding(0, statusBarInsets.top, 0, 0)
+            insets
+        }
+    } else {
+        // For Android 14 and below
+        @Suppress("DEPRECATION")
+        window.statusBarColor = color
+    }
 }

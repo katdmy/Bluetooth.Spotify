@@ -210,10 +210,14 @@ class NotificationListener : NotificationListenerService() {
             scope.launch {
                 val randomVoice = BTRMDataStore.getValue(RANDOM_VOICE, this@NotificationListener)
                 if (randomVoice == true) {
-                    tts.voice = tts.voices.filter{ it.locale.language == Locale.getDefault().language }.random()
-                    tts.speak(title, TextToSpeech.QUEUE_ADD, null, title.toString())
-                    tts.voice = tts.voices.filter{ it.locale.language == Locale.getDefault().language }.random()
-                    tts.speak(text, TextToSpeech.QUEUE_ADD, null, text.toString())
+                    if (tts.voices == null) {
+                        tts.speak(text, TextToSpeech.QUEUE_ADD, null, "$title - $text")
+                    } else {
+                        tts.voice = tts.voices.filter { it.locale.language == Locale.getDefault().language }.random()
+                        tts.speak(title, TextToSpeech.QUEUE_ADD, null, title.toString())
+                        tts.voice = tts.voices.filter { it.locale.language == Locale.getDefault().language }.random()
+                        tts.speak(text, TextToSpeech.QUEUE_ADD, null, text.toString())
+                    }
                 } else {
                     tts.speak("$title - $text", TextToSpeech.QUEUE_ADD, null, "$title - $text")
                 }
