@@ -126,6 +126,7 @@ class ComposeActivity : ComponentActivity() {
 
         initMusicApps(viewModel::onSetInstalledMusicApps)
         initMessengerApps(viewModel::onSetInstalledMessengerApps)
+
         requestPermissionLauncher = registerForActivityResult(
                 ActivityResultContracts.RequestMultiplePermissions()) { permissionAndGrant ->
             if (permissionAndGrant.values.contains(false)) {
@@ -541,24 +542,24 @@ fun MainScreen(
                         installedMusicApps = state.value.installedMusicApps,
                         selectedMusicApp = state.value.selectedMusicApp,
                         randomVoice = randomVoice,
+                        btStatus = state.value.btStatus,
                         onSetTtsMode = onSetTtsMode,
                         onCheckedChangeMessengerApp = onCheckedChangeMessengerApp,
                         onSelectMusicApp = onSelectMusicApp,
                         onSetRandomVoice = onSetRandomVoice,
+                        onClickStopService = onClickStopService,
+                        onClickStartService = onClickStartService,
+                        onClickServiceStatus = onClickServiceStatus,
                         onClickAbandonAudiofocus = onClickAbandonAudiofocus,
                         modifier = Modifier.padding(paddingValues)
                     )
                 }
                 false -> {
                     MainScreenLayout(
-                        btStatus = state.value.btStatus,
                         logMessages = state.value.logMessages,
                         selectedMusicApp = state.value.selectedMusicApp,
                         useTTS = useTTS == true,
                         onClearLog = viewModel::onClearLogMessages,
-                        onClickStopService = onClickStopService,
-                        onClickStartService = onClickStartService,
-                        onClickServiceStatus = onClickServiceStatus,
                         onChangeUseTTS = onChangeUseTTS,
                         onClickOpenMusic = onClickOpenMusic,
                         modifier = Modifier.padding(paddingValues)
@@ -577,10 +578,14 @@ fun SettingsScreenLayout(
     installedMusicApps: ArrayList<MusicApp>,
     selectedMusicApp: MusicApp,
     randomVoice: Boolean?,
+    btStatus: String,
     onSetTtsMode: (Int) -> Unit,
     onCheckedChangeMessengerApp: (String, Boolean) -> Unit,
     onSelectMusicApp: (MusicApp) -> Unit,
     onSetRandomVoice: (Boolean) -> Unit,
+    onClickStopService: () -> Unit,
+    onClickStartService: () -> Unit,
+    onClickServiceStatus: () -> Unit,
     onClickAbandonAudiofocus: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -682,44 +687,6 @@ fun SettingsScreenLayout(
             }
         }
 
-        // Секция кнопки сброса аудиофокуса
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.elevatedCardElevation(4.dp)
-        ) {
-            MyButton(
-                text = stringResource(R.string.abandon_audiofocus),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                onClickAction = onClickAbandonAudiofocus,
-                icon = ImageVector.vectorResource(R.drawable.volume_up) // Добавляем иконку
-            )
-        }
-    }
-}
-
-@Composable
-fun MainScreenLayout(
-    btStatus: String,
-    logMessages: String,
-    useTTS: Boolean,
-    selectedMusicApp: MusicApp,
-    onClearLog: () -> Unit,
-    onClickStopService: () -> Unit,
-    onClickStartService: () -> Unit,
-    onClickServiceStatus: () -> Unit,
-    onChangeUseTTS: (Boolean) -> Unit,
-    onClickOpenMusic: (launchMusicAppIntent: Intent?) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    // Используем фон, чтобы разделить карточки и создать ощущение глубины
-    Column(modifier = modifier
-        .background(MaterialTheme.colorScheme.background)
-        .padding(12.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
-    ) {
         // Карточка для управления сервисом
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -782,6 +749,40 @@ fun MainScreenLayout(
             }
         }
 
+        // Секция кнопки сброса аудиофокуса
+
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.elevatedCardElevation(4.dp)
+        ) {
+            MyButton(
+                text = stringResource(R.string.abandon_audiofocus),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                onClickAction = onClickAbandonAudiofocus,
+                icon = ImageVector.vectorResource(R.drawable.volume_up) // Добавляем иконку
+            )
+        }
+    }
+}
+
+@Composable
+fun MainScreenLayout(
+    logMessages: String,
+    useTTS: Boolean,
+    selectedMusicApp: MusicApp,
+    onClearLog: () -> Unit,
+    onChangeUseTTS: (Boolean) -> Unit,
+    onClickOpenMusic: (launchMusicAppIntent: Intent?) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    // Используем фон, чтобы разделить карточки и создать ощущение глубины
+    Column(modifier = modifier
+        .background(MaterialTheme.colorScheme.background)
+        .padding(12.dp),
+        verticalArrangement = Arrangement.spacedBy(12.dp)
+    ) {
         // Секция для логов
         Card(
             modifier = Modifier
@@ -819,13 +820,14 @@ fun MainScreenLayout(
             Row(
                 modifier = Modifier
                     .padding(16.dp)
+                    .padding(vertical = 16.dp)
                     .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text(
                     text = stringResource(R.string.text_to_speech),
-                    style = MaterialTheme.typography.headlineSmall, // Красивый заголовок
+                    style = MaterialTheme.typography.headlineMedium, // Красивый заголовок
                     modifier = Modifier.padding(end = 12.dp)
                 )
                 Switch(
@@ -881,11 +883,15 @@ fun SettingsLayoutPreview() {
                 MusicApp("com.google.android.apps.youtube.music", null, "Youtube Music", null)
             ),
             randomVoice = false,
+            btStatus = "CONNECTED",
             selectedMusicApp = MusicApp("", null, "", null),
             onSetTtsMode = {},
             onCheckedChangeMessengerApp = { _, _ -> },
             onSelectMusicApp = {},
             onSetRandomVoice = {},
+            onClickStopService = {},
+            onClickStartService = {},
+            onClickServiceStatus = {},
             onClickAbandonAudiofocus = {}
         )
     }
@@ -896,14 +902,10 @@ fun SettingsLayoutPreview() {
 fun MainLayoutPreview() {
     BtReaderMusicTheme {
         MainScreenLayout(
-            btStatus = "CONNECTED",
             logMessages = "",
             useTTS = false,
             selectedMusicApp = MusicApp("com.spotify.music", null, "Spotify", null),
             onClearLog = {},
-            onClickStopService = {},
-            onClickStartService = {},
-            onClickServiceStatus = {},
             onChangeUseTTS = {},
             onClickOpenMusic = {}
         )
@@ -947,11 +949,15 @@ fun SettingsLayoutPreviewInRussian() {
                 MusicApp("com.google.android.apps.youtube.music", null, "Youtube Music", null)
             ),
             randomVoice = false,
+            btStatus = "CONNECTED",
             selectedMusicApp = MusicApp("", null, "", null),
             onSetTtsMode = {},
             onCheckedChangeMessengerApp = { _, _ -> },
             onSelectMusicApp = {},
             onSetRandomVoice = {},
+            onClickStopService = {},
+            onClickStartService = {},
+            onClickServiceStatus = {},
             onClickAbandonAudiofocus = {}
         )
     }
