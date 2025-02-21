@@ -2,15 +2,15 @@ package com.katdmy.android.bluetoothreadermusic.data
 
 
 data class MainUiModel(
-    var btStatus: String = "",
-    var logMessages: String = "",
-    var installedMusicApps: ArrayList<MusicApp> = arrayListOf(),
-    var selectedMusicApp: MusicApp = MusicApp(
+    val btStatus: String = "",
+    val logMessages: String = "",
+    val installedMusicApps: ArrayList<MusicApp> = arrayListOf(),
+    val selectedMusicApp: MusicApp = MusicApp(
         packageName = "",
         launchIntent = null,
         name = "",
         icon = null
     ),
-    var installedMessengerApps: ArrayList<MessengerApp> = arrayListOf(),
-    var settingsShown: Boolean = false
+    val installedMessengerApps: ArrayList<MessengerApp> = arrayListOf(),
+    val testTextToSpeech: String = ""
 )

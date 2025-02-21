@@ -1,10 +1,8 @@
-package com.katdmy.android.bluetoothreadermusic.ui
+package com.katdmy.android.bluetoothreadermusic.ui.main
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.katdmy.android.bluetoothreadermusic.data.MainUiModel
-import com.katdmy.android.bluetoothreadermusic.data.MessengerApp
-import com.katdmy.android.bluetoothreadermusic.data.MusicApp
+import com.katdmy.android.bluetoothreadermusic.data.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -13,6 +11,12 @@ import kotlinx.coroutines.launch
 class MainViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(MainUiModel())
     val uiState: StateFlow<MainUiModel> = _uiState.asStateFlow()
+
+    private val _isReadingTestText = MutableStateFlow(false)
+    val isReadingTestText: StateFlow<Boolean> = _isReadingTestText.asStateFlow()
+
+    private val _permissionState = MutableStateFlow(PermissionsGranted())
+    val permissionState: StateFlow<PermissionsGranted> = _permissionState.asStateFlow()
 
     fun onSetInstalledMusicApps(newInstalledMusicApps: ArrayList<MusicApp>) {
         viewModelScope.launch {
@@ -59,9 +63,27 @@ class MainViewModel : ViewModel() {
         }
     }
 
-    fun toggleSettingsShown() {
+    fun onSetReadNotificationsPermission(newReadNotificationsPermission: Boolean) {
         viewModelScope.launch {
-            _uiState.emit(_uiState.value.copy(settingsShown = !_uiState.value.settingsShown))
+            _permissionState.emit(_permissionState.value.copy(readNotifications = newReadNotificationsPermission))
+        }
+    }
+
+    fun onSetReadingTestText(newReadingTestText: Boolean) {
+        viewModelScope.launch {
+            _isReadingTestText.emit(newReadingTestText)
+        }
+    }
+
+    fun onSetPostNotificationPermission(newPostNotificationPermission: Boolean) {
+        viewModelScope.launch {
+            _permissionState.emit(_permissionState.value.copy(postNotification = newPostNotificationPermission))
+        }
+    }
+
+    fun onSetBTStatusPermission(newBTStatusPermission: Boolean) {
+        viewModelScope.launch {
+            _permissionState.emit(_permissionState.value.copy(btStatus = newBTStatusPermission))
         }
     }
 }

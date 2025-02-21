@@ -17,7 +17,7 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 //import android.util.Log
 import com.katdmy.android.bluetoothreadermusic.R
-import com.katdmy.android.bluetoothreadermusic.ui.ComposeActivity
+import com.katdmy.android.bluetoothreadermusic.ui.main.ComposeActivity
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.Constants.ENABLED_MESSENGERS
 import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
@@ -75,8 +75,6 @@ class NotificationListener : NotificationListenerService() {
             }
         listeningCommunicator = ListeningCommunicator()
 
-        //if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
-        //scope.launch {
         CoroutineScope(Dispatchers.IO).launch {
             BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener).collectLatest { useTTS ->
                 createNotification(useTTS == true)
@@ -139,7 +137,7 @@ class NotificationListener : NotificationListenerService() {
 
         createNotification(newUseTTS)
 
-//        if (status)
+//        if (newUseTTS)
 //            openMusic()
     }
 

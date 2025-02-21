@@ -1,15 +1,19 @@
-package com.katdmy.android.bluetoothreadermusic.ui
+package com.katdmy.android.bluetoothreadermusic.ui.main
 
 import android.Manifest
 import android.annotation.SuppressLint
-import android.app.AlertDialog
 import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
+import android.media.AudioAttributes
+import android.media.AudioFocusRequest
+import android.media.AudioManager
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
+import android.speech.tts.TextToSpeech
+import android.speech.tts.UtteranceProgressListener
 //import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
@@ -17,7 +21,6 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
-import androidx.annotation.RequiresApi
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.ExperimentalAnimationApi
 import androidx.compose.animation.SizeTransform
@@ -47,6 +50,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Clear
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
@@ -59,10 +63,15 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -70,6 +79,10 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -81,7 +94,6 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.core.app.ActivityCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.katdmy.android.bluetoothreadermusic.R
@@ -91,16 +103,21 @@ import com.katdmy.android.bluetoothreadermusic.data.*
 import com.katdmy.android.bluetoothreadermusic.receivers.BtBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.receivers.NotificationBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.services.NotificationListener
+import com.katdmy.android.bluetoothreadermusic.ui.onboarding.OnboardingScreen
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.BluetoothConnectionChecker
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getList
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getString
 import com.katdmy.android.bluetoothreadermusic.util.Constants.ENABLED_MESSENGERS
+import com.katdmy.android.bluetoothreadermusic.util.Constants.IGNORE_LACK_OF_PERMISSION
+import com.katdmy.android.bluetoothreadermusic.util.Constants.ONBOARDING_COMPLETE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.SERVICE_STARTED
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import java.util.Locale
 
 class ComposeActivity : ComponentActivity() {
 
@@ -108,6 +125,10 @@ class ComposeActivity : ComponentActivity() {
     private lateinit var notificationBroadcastReceiver: NotificationBroadcastReceiver
     private lateinit var btBroadcastReceiver: BtBroadcastReceiver
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
+
+    private lateinit var tts: TextToSpeech
+    private lateinit var audioManager: AudioManager
+    private lateinit var focusRequest: AudioFocusRequest
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -124,23 +145,28 @@ class ComposeActivity : ComponentActivity() {
             changeConnectionStatus = viewModel::onChangeBtStatus
         )
 
+        initTTS()
         initMusicApps(viewModel::onSetInstalledMusicApps)
         initMessengerApps(viewModel::onSetInstalledMessengerApps)
+        viewModel.onSetReadingTestText(false)
 
         requestPermissionLauncher = registerForActivityResult(
-                ActivityResultContracts.RequestMultiplePermissions()) { permissionAndGrant ->
-            if (permissionAndGrant.values.contains(false)) {
-                permissionAndGrant.forEach { (name: String, isGranted: Boolean) ->
-                    if (!isGranted) showNoPermissionDialog(name)
+            ActivityResultContracts.RequestMultiplePermissions()) { permissionAndGrant ->
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    if (permissionAndGrant.keys.contains(Manifest.permission.POST_NOTIFICATIONS)) {
+                        viewModel.onSetPostNotificationPermission(permissionAndGrant[Manifest.permission.POST_NOTIFICATIONS] == true)
+                    }
                 }
-            } else {
-                getInitialBluetoothStatus(viewModel::onChangeBtStatus)
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    if (permissionAndGrant.keys.contains(Manifest.permission.BLUETOOTH_CONNECT)) {
+                        viewModel.onSetBTStatusPermission(permissionAndGrant[Manifest.permission.BLUETOOTH_CONNECT] == true)
+                        if (permissionAndGrant[Manifest.permission.BLUETOOTH_CONNECT] == true)
+                            getInitialBluetoothStatus(viewModel::onChangeBtStatus)
+                    }
+                }
             }
-        }
+
         registerReceivers()
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            checkPermissions()
-        }
         lifecycleScope.launch {
             val servicePreviouslyStarted = BTRMDataStore.getValue(SERVICE_STARTED, this@ComposeActivity)
             if (servicePreviouslyStarted == true) {
@@ -156,34 +182,60 @@ class ComposeActivity : ComponentActivity() {
                         NotificationListener::class.java
                     ), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP
                 )
-
-                if (!isNotificationServiceRunning()) {
-                    startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
-                }
             }
         }
 
         setContent {
+            val isOnboardingComplete by BTRMDataStore.getValueFlow(ONBOARDING_COMPLETE, this).collectAsState(initial = false)
+
             BtReaderMusicTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    MainScreen(
-                        viewModel,
-                        ::onClickStopService,
-                        ::onClickStartService,
-                        ::onClickServiceStatus,
-                        ::onSelectMusicApp,
-                        ::onChangeUseTTS,
-                        ::onSetTtsMode,
-                        ::onCheckedChangeMessengerApp,
-                        ::onSetRandomVoice,
-                        ::onClickAbandonAudiofocus,
-                        ::onClickOpenMusic
-                    )
+                    if (isOnboardingComplete == true)
+                        MainScreen(
+                            viewModel,
+                            onClickReadTestText = ::onClickReadTestText,
+                            onClickStopReading = ::onClickStopReading,
+                            onClickStopService = ::onClickStopService,
+                            onClickStartService = ::onClickStartService,
+                            onClickServiceStatus = ::onClickServiceStatus,
+                            onSelectMusicApp = ::onSelectMusicApp,
+                            onChangeUseTTS = ::onChangeUseTTS,
+                            onSetTtsMode = ::onSetTtsMode,
+                            onCheckedChangeMessengerApp = ::onCheckedChangeMessengerApp,
+                            onSetRandomVoice = ::onSetRandomVoice,
+                            onClickRequestReadNotificationsPermission = ::onRequestReadNotificationsPermission,
+                            onClickRequestPostNotificationPermission = ::onRequestShowNotificationPermission,
+                            onClickRequestBtPermission = ::onRequestBtPermission,
+                            onClickAbandonAudiofocus = ::onClickAbandonAudiofocus,
+                            onClickOpenMusic = ::onClickOpenMusic
+                        )
+                    else
+                        OnboardingScreen(
+                            viewModel,
+                            onComplete = ::onboardingComplete,
+                            onChangeUseTTS = ::onChangeUseTTS,
+                            onRequestReadNotificationsPermission = ::onRequestReadNotificationsPermission,
+                            onRequestShowNotificationPermission = ::onRequestShowNotificationPermission,
+                            onRequestBtPermission = ::onRequestBtPermission
+                        )
                 }
             }
+        }
+    }
+
+    override fun onResume() {
+        super.onResume()
+        viewModel.onSetReadNotificationsPermission(isNotificationServiceRunning())
+        viewModel.onSetPostNotificationPermission(checkPostNotificationPermission())
+
+        val btPermission = checkBtPermission()
+        viewModel.onSetBTStatusPermission(btPermission)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (btPermission == true)
+                getInitialBluetoothStatus(viewModel::onChangeBtStatus)
         }
     }
 
@@ -256,7 +308,8 @@ class ComposeActivity : ComponentActivity() {
                         packageName = app,
                         name = name,
                         icon = icon
-                    ))
+                    )
+                )
             }
         }
         setToModel(installedMessengerApps)
@@ -297,85 +350,19 @@ class ComposeActivity : ComponentActivity() {
         } else {
             registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
         }
-
-        if (Settings.Secure.getString(this.contentResolver, "enabled_notification_listeners")
-                .contains(applicationContext.packageName)
-        )
-            Intent(this, NotificationListener::class.java).also { intent -> startService(intent) }
-        else
-            startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
     }
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    private fun checkPermissions() {
-        val postNotificationPermissionGranted = when {
-            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED ->
-                true
-            ActivityCompat.shouldShowRequestPermissionRationale(
-                this, Manifest.permission.POST_NOTIFICATIONS) -> {
-                // explain to the user why your app requires this permission and what features are disabled if it's declined
-                // include "cancel" button that lets the user continue without granting the permission
-                showRequestPermissionDialog()
-                true
-            }
-            else -> {
-                false
-            }
-        }
-        val bluetoothConnectPermissionGranted = when {
-            checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED -> {
-                true
-            }
-            ActivityCompat.shouldShowRequestPermissionRationale(
-                this, Manifest.permission.BLUETOOTH_CONNECT) -> {
-                // explain to the user why your app requires this permission and what features are disabled if it's declined
-                // include "cancel" button that lets the user continue without granting the permission
-                showRequestPermissionDialog()
-                true
-            }
-            else -> {
-                false
-            }
-        }
-        if (!bluetoothConnectPermissionGranted && !postNotificationPermissionGranted)
-        // directly ask for the permission, registered ActivityResultCallback gets the result
-            requestPermissionLauncher.launch(arrayOf(
-                Manifest.permission.POST_NOTIFICATIONS,
-                Manifest.permission.BLUETOOTH_CONNECT
-            ))
-        else {
-            if (!bluetoothConnectPermissionGranted)
-                requestPermissionLauncher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
-            if (!postNotificationPermissionGranted)
-                requestPermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
-            else {
-                getInitialBluetoothStatus(viewModel::onChangeBtStatus)
-            }
-        }
-    }
+    private fun checkPostNotificationPermission() : Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+        } else
+            false
 
-    @RequiresApi(Build.VERSION_CODES.TIRAMISU)
-    fun showRequestPermissionDialog() {
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.permission_header))
-            .setMessage(getString(R.string.permission_complete_rationale))
-            .setPositiveButton(getString(R.string.permission_enable)) { _, _ -> requestPermissionLauncher.launch(arrayOf(
-                Manifest.permission.POST_NOTIFICATIONS,
-                Manifest.permission.BLUETOOTH_CONNECT
-            )) }
-            .setNegativeButton(getString(R.string.permission_disable)) { _, _ -> }
-            .create()
-            .show()
-    }
-
-    @SuppressLint("StringFormatInvalid")
-    private fun showNoPermissionDialog(name: String) {
-        AlertDialog.Builder(this)
-            .setTitle(getString(R.string.permission_required_header))
-            .setMessage(getString(R.string.permission_required_header, name))
-            .create()
-            .show()
-    }
+    private fun checkBtPermission() : Boolean =
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
+        } else
+            false
 
     private fun isNotificationServiceRunning(): Boolean {
         val enabledNotificationListeners =
@@ -383,6 +370,67 @@ class ComposeActivity : ComponentActivity() {
         return enabledNotificationListeners != null && enabledNotificationListeners.contains(
             packageName
         )
+    }
+
+    private fun initTTS() {
+        tts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                ttsInitialized()
+            }
+        }
+
+        audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        focusRequest =
+            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE).run {
+                setAudioAttributes(AudioAttributes.Builder().run {
+                    setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+                    setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    build()
+                })
+                build()
+            }
+    }
+
+    private fun ttsInitialized() {
+        tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
+            override fun onStart(utteranceId: String) {
+                audioManager.requestAudioFocus(focusRequest)
+                viewModel.onSetReadingTestText(true)
+            }
+
+            override fun onDone(utteranceId: String) {
+                audioManager.abandonAudioFocusRequest(focusRequest)
+                viewModel.onSetReadingTestText(false)
+            }
+
+            @Deprecated("Deprecated in Java")
+            override fun onError(utteranceId: String) {
+                audioManager.abandonAudioFocusRequest(focusRequest)
+                viewModel.onSetReadingTestText(false)
+            }
+        })
+    }
+
+    private fun onClickReadTestText(text: String) {
+        lifecycleScope.launch {
+            val randomVoice = BTRMDataStore.getValue(RANDOM_VOICE, this@ComposeActivity)
+            if (randomVoice == true) {
+                if (tts.voices == null) {
+                    tts.speak(text, TextToSpeech.QUEUE_ADD, null, text)
+                } else {
+                    tts.voice = tts.voices.filter { it.locale.language == Locale.getDefault().language }.random()
+                    tts.speak(text, TextToSpeech.QUEUE_ADD, null, text)
+                }
+            } else {
+                tts.speak(text, TextToSpeech.QUEUE_ADD, null, text)
+            }
+            viewModel.onAddLogMessage(text)
+        }
+    }
+
+    private fun onClickStopReading() {
+        tts.stop()
+        viewModel.onSetReadingTestText(false)
     }
 
     private fun onClickStopService() {
@@ -415,6 +463,7 @@ class ComposeActivity : ComponentActivity() {
         }
         lifecycleScope.launch {
             BTRMDataStore.saveValue(true, SERVICE_STARTED, this@ComposeActivity)
+            BTRMDataStore.saveValue(false, IGNORE_LACK_OF_PERMISSION, this@ComposeActivity)
         }
     }
 
@@ -472,12 +521,36 @@ class ComposeActivity : ComponentActivity() {
     private fun getInitialBluetoothStatus(setToModel: (String) -> Unit) {
         BluetoothConnectionChecker(this, setToModel)
     }
+
+    private fun onboardingComplete() {
+        lifecycleScope.launch {
+            BTRMDataStore.saveValue(true, ONBOARDING_COMPLETE, this@ComposeActivity)
+        }
+    }
+
+    private fun onRequestReadNotificationsPermission() {
+        startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+    }
+
+    private fun onRequestShowNotificationPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+        }
+    }
+
+    private fun onRequestBtPermission() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            requestPermissionLauncher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
+        }
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
 @Composable
 fun MainScreen(
     viewModel: MainViewModel,
+    onClickReadTestText: (String) -> Unit,
+    onClickStopReading: () -> Unit,
     onClickStopService: () -> Unit,
     onClickStartService: () -> Unit,
     onClickServiceStatus: () -> Unit,
@@ -486,22 +559,34 @@ fun MainScreen(
     onSetTtsMode: (Int) -> Unit,
     onCheckedChangeMessengerApp: (String, Boolean) -> Unit,
     onSetRandomVoice: (Boolean) -> Unit,
+    onClickRequestReadNotificationsPermission: () -> Unit,
+    onClickRequestPostNotificationPermission: () -> Unit,
+    onClickRequestBtPermission: () -> Unit,
     onClickAbandonAudiofocus: () -> Unit,
     onClickOpenMusic: (launchMusicAppIntent: Intent?) -> Unit
 ) {
+    val scope = rememberCoroutineScope()
+    val snackbarHostState = remember { SnackbarHostState() }
     val state = viewModel.uiState.collectAsState()
+    val isReadingTestText = viewModel.isReadingTestText.collectAsState()
+    val permissions = viewModel.permissionState.collectAsState()
     val context = LocalContext.current
+    var settingsShown by remember { mutableStateOf(false) }
+    var testTextToSpeech by remember { mutableStateOf("") }
     val useTTS by BTRMDataStore.getValueFlow(USE_TTS_SF, context).collectAsState(initial = false)
     val enabledMessengerString by BTRMDataStore.getValueFlow(ENABLED_MESSENGERS, context).collectAsState(initial = "")
     val ttsModeSelection by BTRMDataStore.getValueFlow(TTS_MODE, context).collectAsState(initial = 0)
     val randomVoice by BTRMDataStore.getValueFlow(RANDOM_VOICE, context).collectAsState(initial = false)
 
     Scaffold(
+        snackbarHost = {
+            SnackbarHost(hostState = snackbarHostState)
+        },
         topBar = {
             TopAppBar(
                 title = {
                     AnimatedContent(
-                        targetState = state.value.settingsShown,
+                        targetState = settingsShown,
                         transitionSpec = { slideInHorizontally { -it } + fadeIn() togetherWith
                                 slideOutHorizontally { it } + fadeOut() using
                                 SizeTransform(clip = false)
@@ -515,7 +600,7 @@ fun MainScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = viewModel::toggleSettingsShown ) {
+                    IconButton(onClick = { settingsShown = !settingsShown } ) {
                         Icon(
                             imageVector = Icons.Default.Settings,
                             contentDescription = "Open/close settings"
@@ -526,7 +611,7 @@ fun MainScreen(
         }
     ) { paddingValues ->
         AnimatedContent(
-            targetState = state.value.settingsShown,
+            targetState = settingsShown,
             transitionSpec = { slideInHorizontally { -it } + fadeIn() togetherWith
                     slideOutHorizontally { it } + fadeOut() using
                     SizeTransform(clip = false)
@@ -536,12 +621,17 @@ fun MainScreen(
             when (it) {
                 true -> {
                     SettingsScreenLayout(
+                        scope = scope,
+                        snackbarHostState = snackbarHostState,
                         ttsModeSelection = ttsModeSelection,
                         installedMessengers = state.value.installedMessengerApps,
                         enabledMessengerString = enabledMessengerString,
                         installedMusicApps = state.value.installedMusicApps,
                         selectedMusicApp = state.value.selectedMusicApp,
                         randomVoice = randomVoice,
+                        postNotificationPermissionGranted = permissions.value.postNotification,
+                        readNotificationsPermissionGranted = permissions.value.readNotifications,
+                        btStatusPermissionGranted = permissions.value.btStatus,
                         btStatus = state.value.btStatus,
                         onSetTtsMode = onSetTtsMode,
                         onCheckedChangeMessengerApp = onCheckedChangeMessengerApp,
@@ -550,17 +640,40 @@ fun MainScreen(
                         onClickStopService = onClickStopService,
                         onClickStartService = onClickStartService,
                         onClickServiceStatus = onClickServiceStatus,
+                        onClickRequestReadNotificationsPermission = onClickRequestReadNotificationsPermission,
+                        onClickRequestPostNotificationPermission = onClickRequestPostNotificationPermission,
+                        onClickRequestBtPermission = onClickRequestBtPermission,
                         onClickAbandonAudiofocus = onClickAbandonAudiofocus,
                         modifier = Modifier.padding(paddingValues)
                     )
                 }
                 false -> {
                     MainScreenLayout(
+                        testTextToSpeech = testTextToSpeech,
+                        onTestTextToSpeechChange = { newText -> testTextToSpeech = newText },
                         logMessages = state.value.logMessages,
                         selectedMusicApp = state.value.selectedMusicApp,
                         useTTS = useTTS == true,
+                        isReadingTestText = isReadingTestText.value,
+                        onClickReadTestText = onClickReadTestText,
+                        onClickStopReading = onClickStopReading,
                         onClearLog = viewModel::onClearLogMessages,
-                        onChangeUseTTS = onChangeUseTTS,
+                        onChangeUseTTS = { newUseTTS ->
+                            if (permissions.value.readNotifications)
+                                onChangeUseTTS(newUseTTS)
+                            else
+                                scope.launch {
+                                    val result = snackbarHostState.showSnackbar(
+                                        message = context.getString(R.string.no_read_notifications_permission),
+                                        actionLabel = context.getString(R.string.enable_permission),
+                                        duration = SnackbarDuration.Long
+                                    )
+                                    when (result) {
+                                        SnackbarResult.ActionPerformed -> onClickRequestReadNotificationsPermission()
+                                        SnackbarResult.Dismissed -> {}
+                                    }
+                                }
+                        },
                         onClickOpenMusic = onClickOpenMusic,
                         modifier = Modifier.padding(paddingValues)
                     )
@@ -572,12 +685,17 @@ fun MainScreen(
 
 @Composable
 fun SettingsScreenLayout(
+    scope: CoroutineScope,
+    snackbarHostState: SnackbarHostState,
     ttsModeSelection: Int?,
     installedMessengers: ArrayList<MessengerApp>,
     enabledMessengerString: String?,
     installedMusicApps: ArrayList<MusicApp>,
     selectedMusicApp: MusicApp,
     randomVoice: Boolean?,
+    postNotificationPermissionGranted: Boolean,
+    readNotificationsPermissionGranted: Boolean,
+    btStatusPermissionGranted: Boolean,
     btStatus: String,
     onSetTtsMode: (Int) -> Unit,
     onCheckedChangeMessengerApp: (String, Boolean) -> Unit,
@@ -586,9 +704,13 @@ fun SettingsScreenLayout(
     onClickStopService: () -> Unit,
     onClickStartService: () -> Unit,
     onClickServiceStatus: () -> Unit,
+    onClickRequestReadNotificationsPermission: () -> Unit,
+    onClickRequestPostNotificationPermission: () -> Unit,
+    onClickRequestBtPermission: () -> Unit,
     onClickAbandonAudiofocus: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val options = listOf(
         stringResource(R.string.mode_switch_allapps),
         stringResource(R.string.mode_switch_messengers)
@@ -712,7 +834,22 @@ fun SettingsScreenLayout(
                         modifier = Modifier
                             .weight(1f)
                             .padding(horizontal = 8.dp),
-                        onClickAction = onClickServiceStatus,
+                        onClickAction = {
+                            onClickServiceStatus
+                            if (!postNotificationPermissionGranted)
+
+                                scope.launch {
+                                    val result = snackbarHostState.showSnackbar(
+                                        message = context.getString(R.string.no_post_notification_permission),
+                                        actionLabel = context.getString(R.string.enable_permission),
+                                        duration = SnackbarDuration.Long
+                                    )
+                                    when (result) {
+                                        SnackbarResult.ActionPerformed -> onClickRequestPostNotificationPermission()
+                                        SnackbarResult.Dismissed -> {}
+                                    }
+                                }
+                        },
                         icon = Icons.Default.Info // Добавляем иконку
                     )
                     MyButton(
@@ -720,7 +857,21 @@ fun SettingsScreenLayout(
                         modifier = Modifier
                             .weight(1f)
                             .padding(start = 8.dp),
-                        onClickAction = onClickStartService,
+                        onClickAction = {
+                            onClickStartService
+                            if (!readNotificationsPermissionGranted)
+                                scope.launch {
+                                    val result = snackbarHostState.showSnackbar(
+                                        message = context.getString(R.string.no_read_notifications_permission),
+                                        actionLabel = context.getString(R.string.enable_permission),
+                                        duration = SnackbarDuration.Long
+                                    )
+                                    when (result) {
+                                        SnackbarResult.ActionPerformed -> onClickRequestReadNotificationsPermission()
+                                        SnackbarResult.Dismissed -> {}
+                                    }
+                                }
+                        },
                         icon = Icons.Default.PlayArrow // Добавляем иконку
                     )
                 }
@@ -742,10 +893,16 @@ fun SettingsScreenLayout(
                     style = MaterialTheme.typography.headlineSmall
                 ) // Заголовок крупнее
                 Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = btStatus,
-                    style = MaterialTheme.typography.bodyLarge
-                )
+                if (btStatusPermissionGranted)
+                    Text(
+                        text = btStatus,
+                        style = MaterialTheme.typography.bodyLarge
+                    )
+                else
+                    MyButton(
+                        text = stringResource(R.string.enable_permission),
+                        onClickAction = onClickRequestBtPermission
+                    )
             }
         }
 
@@ -769,9 +926,14 @@ fun SettingsScreenLayout(
 
 @Composable
 fun MainScreenLayout(
+    testTextToSpeech: String,
+    onTestTextToSpeechChange: (String) -> Unit,
     logMessages: String,
     useTTS: Boolean,
     selectedMusicApp: MusicApp,
+    isReadingTestText: Boolean,
+    onClickReadTestText: (String) -> Unit,
+    onClickStopReading: () -> Unit,
     onClearLog: () -> Unit,
     onChangeUseTTS: (Boolean) -> Unit,
     onClickOpenMusic: (launchMusicAppIntent: Intent?) -> Unit,
@@ -783,6 +945,50 @@ fun MainScreenLayout(
         .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
+        // Секция для проверки работы TTS
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.elevatedCardElevation(4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                OutlinedTextField(
+                    value = testTextToSpeech,
+                    onValueChange = { onTestTextToSpeechChange(it) },
+                    label = {
+                        Text(text = stringResource(R.string.tts_test_label))
+                    },
+                    trailingIcon = {
+                        Image(
+                            imageVector = Icons.Default.Clear,
+                            contentDescription = null,
+                            modifier = Modifier.clickable { onTestTextToSpeechChange("") }
+                        )
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                if (isReadingTestText)
+                // Кнопка остановки чтения текста
+                    MyButton(
+                        text = stringResource(R.string.tts_stop),
+                        onClickAction = { onClickStopReading() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        icon = ImageVector.vectorResource(R.drawable.ic_close)
+                    )
+                else
+                    // Кнопка чтения текста
+                    MyButton(
+                        text = stringResource(R.string.tts_read),
+                        onClickAction = { onClickReadTestText(testTextToSpeech) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        icon = ImageVector.vectorResource(R.drawable.ic_music_note)
+                    )
+            }
+        }
+
         // Секция для логов
         Card(
             modifier = Modifier
@@ -799,7 +1005,9 @@ fun MainScreenLayout(
                 Text(
                     text = logMessages,
                     style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.weight(1f).verticalScroll(rememberScrollState())
+                    modifier = Modifier
+                        .weight(1f)
+                        .verticalScroll(rememberScrollState())
                 )
                 // Кнопка очистки логов
                 MyButton(
@@ -871,6 +1079,8 @@ fun MainScreenLayout(
 fun SettingsLayoutPreview() {
     BtReaderMusicTheme {
         SettingsScreenLayout(
+            scope = rememberCoroutineScope(),
+            snackbarHostState = SnackbarHostState(),
             ttsModeSelection = 1,
             installedMessengers = arrayListOf(
                 MessengerApp("org.whatsapp", "Whatsapp", null),
@@ -883,6 +1093,9 @@ fun SettingsLayoutPreview() {
                 MusicApp("com.google.android.apps.youtube.music", null, "Youtube Music", null)
             ),
             randomVoice = false,
+            postNotificationPermissionGranted = false,
+            readNotificationsPermissionGranted = false,
+            btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
             selectedMusicApp = MusicApp("", null, "", null),
             onSetTtsMode = {},
@@ -892,6 +1105,9 @@ fun SettingsLayoutPreview() {
             onClickStopService = {},
             onClickStartService = {},
             onClickServiceStatus = {},
+            onClickRequestReadNotificationsPermission = {},
+            onClickRequestPostNotificationPermission = {},
+            onClickRequestBtPermission = {},
             onClickAbandonAudiofocus = {}
         )
     }
@@ -902,9 +1118,14 @@ fun SettingsLayoutPreview() {
 fun MainLayoutPreview() {
     BtReaderMusicTheme {
         MainScreenLayout(
+            testTextToSpeech = "",
+            onTestTextToSpeechChange = {},
             logMessages = "",
             useTTS = false,
             selectedMusicApp = MusicApp("com.spotify.music", null, "Spotify", null),
+            isReadingTestText = false,
+            onClickReadTestText = {},
+            onClickStopReading = {},
             onClearLog = {},
             onChangeUseTTS = {},
             onClickOpenMusic = {}
@@ -918,6 +1139,8 @@ fun MainScreenPreview() {
     BtReaderMusicTheme {
         MainScreen(
             viewModel = MainViewModel(),
+            onClickReadTestText = {},
+            onClickStopReading = {},
             onClickStopService = {},
             onClickStartService = {},
             onClickServiceStatus = {},
@@ -925,6 +1148,9 @@ fun MainScreenPreview() {
             onChangeUseTTS = {},
             onSetTtsMode = {},
             onCheckedChangeMessengerApp = { _, _ -> },
+            onClickRequestReadNotificationsPermission = {},
+            onClickRequestPostNotificationPermission = {},
+            onClickRequestBtPermission = {},
             onClickAbandonAudiofocus = {},
             onSetRandomVoice = {},
             onClickOpenMusic = {}
@@ -937,6 +1163,8 @@ fun MainScreenPreview() {
 fun SettingsLayoutPreviewInRussian() {
     BtReaderMusicTheme {
         SettingsScreenLayout(
+            scope = rememberCoroutineScope(),
+            snackbarHostState = SnackbarHostState(),
             ttsModeSelection = 1,
             installedMessengers = arrayListOf(
                 MessengerApp("org.whatsapp", "Whatsapp", null),
@@ -949,15 +1177,21 @@ fun SettingsLayoutPreviewInRussian() {
                 MusicApp("com.google.android.apps.youtube.music", null, "Youtube Music", null)
             ),
             randomVoice = false,
+            btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
             selectedMusicApp = MusicApp("", null, "", null),
             onSetTtsMode = {},
             onCheckedChangeMessengerApp = { _, _ -> },
             onSelectMusicApp = {},
+            postNotificationPermissionGranted = false,
+            readNotificationsPermissionGranted = false,
             onSetRandomVoice = {},
             onClickStopService = {},
             onClickStartService = {},
             onClickServiceStatus = {},
+            onClickRequestReadNotificationsPermission = {},
+            onClickRequestPostNotificationPermission = {},
+            onClickRequestBtPermission = {},
             onClickAbandonAudiofocus = {}
         )
     }
@@ -969,6 +1203,8 @@ fun MainScreenPreviewInRussian() {
     BtReaderMusicTheme {
         MainScreen(
             viewModel = MainViewModel(),
+            onClickReadTestText = {},
+            onClickStopReading = {},
             onClickStopService = {},
             onClickStartService = {},
             onClickServiceStatus = {},
@@ -976,6 +1212,9 @@ fun MainScreenPreviewInRussian() {
             onChangeUseTTS = {},
             onSetTtsMode = {},
             onCheckedChangeMessengerApp = { _, _ -> },
+            onClickRequestReadNotificationsPermission = {},
+            onClickRequestPostNotificationPermission = {},
+            onClickRequestBtPermission = {},
             onClickAbandonAudiofocus = {},
             onSetRandomVoice = {},
             onClickOpenMusic = {}
@@ -987,7 +1226,7 @@ fun MainScreenPreviewInRussian() {
 fun MyButton(
     text: String,
     onClickAction: () -> Unit,
-    icon: ImageVector,
+    icon: ImageVector? = null,
     modifier: Modifier = Modifier,
     enabled: Boolean = true
 ) {
@@ -1000,11 +1239,13 @@ fun MyButton(
         )
     ) {
         Row {
-            Icon(
-                imageVector = icon,
-                contentDescription = null
-            )
-            Spacer(modifier = Modifier.size(4.dp))
+            icon?.let {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null
+                )
+                Spacer(modifier = Modifier.size(4.dp))
+            }
             Text(
                 text = text,
                 maxLines = 1,
@@ -1126,13 +1367,18 @@ fun MessengerAppCard(
             Image(
                 painter = rememberDrawablePainter(drawable = messengerApp.icon),
                 contentDescription = "${messengerApp.name} icon",
-                modifier = Modifier.alpha(if (!enabled) 0.5f else 1f).size(48.dp).padding(6.dp)
+                modifier = Modifier
+                    .alpha(if (!enabled) 0.5f else 1f)
+                    .size(48.dp)
+                    .padding(6.dp)
             )
             Text(
                 text = messengerApp.name,
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Center,
-                modifier = Modifier.alpha(if (!enabled) 0.5f else 1f).padding(start = 4.dp)
+                modifier = Modifier
+                    .alpha(if (!enabled) 0.5f else 1f)
+                    .padding(start = 4.dp)
             )
             Spacer(modifier = Modifier.weight(1f))
             Switch(

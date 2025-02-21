@@ -2,12 +2,31 @@
 <resources>
     <string name="app_name">BT Reader + Music</string>
     <string name="service_name">Получение уведомлений</string>
-    <string name="permission_header">Отсутствуют разрешения</string>
-    <string name="permission_complete_rationale">Для работы приложения требуются разрешение на показ уведомлений (для управления работы сервисом) и разрешение на чтение состояния подключения Bluetooth (для автоматического включения/выключения функции чтения сообщений)</string>
-    <string name="permission_enable">Разрешить</string>
-    <string name="permission_disable">Запретить</string>
-    <string name="permission_required_header">Отсутствует разрешение</string>
-    <string name="permission_required">Для работы приложения требуется следующее разрешение: %1%s</string>
+
+    <string name="onboarding_welcome_title">Добро пожаловать!</string>
+    <string name="onboarding_welcome_description">Это приложение читает вслух уведомления с помощью функции Text-To-Speech.</string>
+    <string name="onboarding_read_notifications_title">Разрешение на чтение уведомлений</string>
+    <string name="onboarding_read_notifications_description">Необходимо приложению предоставить доступ к получению уведомлений. Никакие данные не передаются разработчику, третьим лицам или на внешние серверы. Для этого в следующем меню найдите \"%s\" и разрешите ему доступ к уведомлениям.</string>
+    <string name="onboarding_tts_title">Функция Text-to-Speech</string>
+    <string name="onboarding_tts_description">Можно сразу включить Text-To-Speech, а далее в настройках выбрать режим чтения (все уведомления или только от мессенджеров).</string>
+    <string name="onboarding_post_notification_title">Разрешение на показ уведомления</string>
+    <string name="onboarding_post_notification_description">Для бесперебойной работы в фоне и для контроля за работой приложения требуется разрешение на показ уведомления.</string>
+    <string name="onboarding_bt_status_title">Разрешение на получение состояния Bluetooth</string>
+    <string name="onboarding_bt_status_description">Для автоматического включения функции чтения текста при подключении Bluetooth-устройства и отключения необходимо разрешение на чтение состояния Bluetooth.</string>
+    <string name="onboarding_back">Назад</string>
+    <string name="onboarding_next">Далее</string>
+    <string name="onboarding_launch">Начать</string>
+    <string name="onboarding_permission_granted">Разрешение предоставлено</string>
+
+    <string name="no_read_notifications_permission">Отсутствует разрешение на чтение уведомлений</string>
+    <string name="no_post_notification_permission">Отсутствует разрешение на показ уведомления</string>
+    <string name="open_permissions_menu">Открыть меню разрешений</string>
+    <string name="enable_permission">Разрешить</string>
+
+    <string name="tts_test_label">Тест синтеза речи"</string>
+    <string name="tts_read">Озвучить</string>
+    <string name="tts_stop">Остановить чтение</string>
+
     <string name="service_started">СЕРВИС ЗАПУЩЕН</string>
     <string name="service_stopped">СЕРВИС ОСТАНОВЛЕН</string>
     <string name="settings_header">Настройки</string>

@@ -3,12 +3,29 @@
     <string name="service_name">Notifications Listener</string>
     <string name="service_channel_name" translatable="false">notification_listener_service</string>
 
-    <string name="permission_header">Permissions required</string>
-    <string name="permission_complete_rationale">Show notification (for service control) and Bluetooth state reading (for automatic turning on/off service) permissions are required.</string>
-    <string name="permission_enable">Enable</string>
-    <string name="permission_disable">Disable</string>
-    <string name="permission_required_header">Permission required</string>
-    <string name="permission_required">Permissions required for the app work are missing: %1%s</string>
+    <string name="onboarding_welcome_title">Welcome!</string>
+    <string name="onboarding_welcome_description">This app reads notifications aloud using the Text-To-Speech function.</string>
+    <string name="onboarding_read_notifications_title">Notification Access Permission</string>
+    <string name="onboarding_read_notifications_description">The app requires access to receive notifications. No data is transmitted to the developer, third parties, or external servers. In the next menu, find \"%s\" and allow it to access notifications.</string>
+    <string name="onboarding_tts_title">Text-to-Speech Feature</string>
+    <string name="onboarding_tts_description">You can enable Text-To-Speech right away and later choose a reading mode in the settings (all notifications or only from messengers).</string>
+    <string name="onboarding_post_notification_title">Permission to Display Notifications</string>
+    <string name="onboarding_post_notification_description">To ensure smooth background operation and monitor the app’s functionality, permission to display notifications is required.</string>
+    <string name="onboarding_bt_status_title">Bluetooth Status Permission</string>
+    <string name="onboarding_bt_status_description">To automatically enable text reading when a Bluetooth device is connected and disable it when disconnected, permission to read the Bluetooth status is required.</string>
+    <string name="onboarding_back">Back</string>
+    <string name="onboarding_next">Next</string>
+    <string name="onboarding_launch">Start</string>
+    <string name="onboarding_permission_granted">Permission granted</string>
+
+    <string name="no_read_notifications_permission">Missing permission to read notifications</string>
+    <string name="no_post_notification_permission">Missing permission to display notifications</string>
+    <string name="open_permissions_menu">Open permissions menu</string>
+    <string name="enable_permission">Enable</string>
+
+    <string name="tts_test_label">Speech Synthesis Test</string>
+    <string name="tts_read">Speak</string>
+    <string name="tts_stop">Stop speaking</string>
 
     <string name="service_started">SERVICE STARTED</string>
     <string name="service_stopped">SERVICE STOPPED</string>
