@@ -35,7 +35,7 @@
     <string name="mode_switch_allapps">Все приложения</string>
     <string name="mode_switch_messengers">Мессенджеры</string>
     <string name="music_app_header">Музыка</string>
-    <string name="random_voice_header">Случайный голос</string>
+    <string name="random_voice_header">Читать разными голосами</string>
     <string name="abandon_audiofocus">Сбросить аудиофокус</string>
     <string name="service_header">Управление сервисом</string>
     <string name="service_stop">Стоп</string>

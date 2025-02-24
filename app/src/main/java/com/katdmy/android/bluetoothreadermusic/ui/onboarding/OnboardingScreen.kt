@@ -240,7 +240,23 @@ fun OnboardingScreenPreview() {
     }
 }
 
+@Preview(showBackground = true, locale = "ru")
 @Composable
+fun OnboardingScreenPreviewInRussian() {
+    BtReaderMusicTheme {
+        OnboardingScreen(
+            viewModel = MainViewModel(),
+            onComplete = {},
+            onChangeUseTTS = {},
+            onRequestReadNotificationsPermission = {},
+            onRequestShowNotificationPermission = {},
+            onRequestBtPermission = {}
+        )
+    }
+}
+
+
+    @Composable
 fun OnboardingIndicator(
     totalPages: Int,
     currentPage: Int,
