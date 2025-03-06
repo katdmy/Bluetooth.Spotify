@@ -34,6 +34,7 @@
     <string name="mode_switch_header">Выбор режима уведомлений</string>
     <string name="mode_switch_allapps">Все приложения</string>
     <string name="mode_switch_messengers">Мессенджеры</string>
+    <string name="messengers_header">Доступные мессенджеры</string>
     <string name="music_app_header">Музыка</string>
     <string name="random_voice_header">Читать разными голосами</string>
     <string name="abandon_audiofocus">Сбросить аудиофокус</string>

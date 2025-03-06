@@ -38,12 +38,16 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -94,6 +98,8 @@ import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.katdmy.android.bluetoothreadermusic.R
@@ -132,6 +138,8 @@ class ComposeActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        WindowCompat.setDecorFitsSystemWindows(window, false)
 
         notificationBroadcastReceiver = NotificationBroadcastReceiver(
             addLogRecord = viewModel::onAddLogMessage
@@ -367,9 +375,7 @@ class ComposeActivity : ComponentActivity() {
     private fun isNotificationServiceRunning(): Boolean {
         val enabledNotificationListeners =
             Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
-        return enabledNotificationListeners != null && enabledNotificationListeners.contains(
-            packageName
-        )
+        return enabledNotificationListeners?.contains(packageName) == true
     }
 
     private fun initTTS() {
@@ -579,6 +585,7 @@ fun MainScreen(
     val randomVoice by BTRMDataStore.getValueFlow(RANDOM_VOICE, context).collectAsState(initial = false)
 
     Scaffold(
+        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Bottom),
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
         },
@@ -606,7 +613,9 @@ fun MainScreen(
                             contentDescription = "Open/close settings"
                         )
                     }
-                }
+                },
+                windowInsets = WindowInsets(top = 0.dp),
+                modifier = Modifier.background(MaterialTheme.colorScheme.primary)
             )
         }
     ) { paddingValues ->
@@ -616,7 +625,8 @@ fun MainScreen(
                     slideOutHorizontally { it } + fadeOut() using
                     SizeTransform(clip = false)
             },
-            label = "Screen Contents"
+            label = "Screen Contents",
+            modifier = Modifier.padding(paddingValues)
         ) {
             when (it) {
                 true -> {
@@ -643,8 +653,7 @@ fun MainScreen(
                         onClickRequestReadNotificationsPermission = onClickRequestReadNotificationsPermission,
                         onClickRequestPostNotificationPermission = onClickRequestPostNotificationPermission,
                         onClickRequestBtPermission = onClickRequestBtPermission,
-                        onClickAbandonAudiofocus = onClickAbandonAudiofocus,
-                        modifier = Modifier.padding(paddingValues)
+                        onClickAbandonAudiofocus = onClickAbandonAudiofocus
                     )
                 }
                 false -> {
@@ -674,8 +683,7 @@ fun MainScreen(
                                     }
                                 }
                         },
-                        onClickOpenMusic = onClickOpenMusic,
-                        modifier = Modifier.padding(paddingValues)
+                        onClickOpenMusic = onClickOpenMusic
                     )
                 }
             }
@@ -799,7 +807,8 @@ fun SettingsScreenLayout(
             ) {
                 Text(
                     text = stringResource(R.string.random_voice_header),
-                    style = MaterialTheme.typography.headlineSmall, // Красивый заголовок
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontSize = 22.sp,
                     modifier = Modifier.padding(end = 12.dp)
                 )
                 Switch(
@@ -1327,7 +1336,7 @@ fun MessengerAppColumn(
 ) {
     Column(modifier = modifier) {
         Text(
-            text = "Messengers",
+            text = stringResource(R.string.messengers_header),
             style = MaterialTheme.typography.headlineSmall,
             modifier = Modifier.alpha(if (!enabled) 0.5f else 1f)
         )
