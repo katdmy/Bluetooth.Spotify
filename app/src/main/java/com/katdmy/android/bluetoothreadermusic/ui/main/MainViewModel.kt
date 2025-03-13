@@ -18,6 +18,10 @@ class MainViewModel : ViewModel() {
     private val _permissionState = MutableStateFlow(PermissionsGranted())
     val permissionState: StateFlow<PermissionsGranted> = _permissionState.asStateFlow()
 
+    init {
+        onSetReadingTestText(false)
+    }
+
     fun onSetInstalledMusicApps(newInstalledMusicApps: ArrayList<MusicApp>) {
         viewModelScope.launch {
             _uiState.emit(_uiState.value.copy(installedMusicApps = newInstalledMusicApps))

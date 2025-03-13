@@ -2,6 +2,7 @@ package com.katdmy.android.bluetoothreadermusic.ui.main
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.app.NotificationManager
 import android.content.ComponentName
 import android.content.Intent
 import android.content.IntentFilter
@@ -18,6 +19,7 @@ import android.speech.tts.UtteranceProgressListener
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
@@ -39,15 +41,16 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.defaultMinSize
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBars
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -99,7 +102,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.core.view.WindowCompat
 import androidx.lifecycle.lifecycleScope
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.katdmy.android.bluetoothreadermusic.R
@@ -139,8 +141,21 @@ class ComposeActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        WindowCompat.setDecorFitsSystemWindows(window, false)
+        enableEdgeToEdge()
+        // Включаем Edge-to-Edge
+        //WindowCompat.setDecorFitsSystemWindows(window, false)
+        //window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
 
+        /*// Определяем, включена ли светлая тема
+        val isLightTheme = resources.configuration.uiMode and
+                android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
+                android.content.res.Configuration.UI_MODE_NIGHT_NO
+
+        // Контролируем цвет иконок статус-бара
+        val insetsController = WindowInsetsControllerCompat(window, window.decorView)
+        insetsController.isAppearanceLightStatusBars = isLightTheme
+        insetsController.isAppearanceLightNavigationBars = isLightTheme
+*/
         notificationBroadcastReceiver = NotificationBroadcastReceiver(
             addLogRecord = viewModel::onAddLogMessage
         )
@@ -156,7 +171,6 @@ class ComposeActivity : ComponentActivity() {
         initTTS()
         initMusicApps(viewModel::onSetInstalledMusicApps)
         initMessengerApps(viewModel::onSetInstalledMessengerApps)
-        viewModel.onSetReadingTestText(false)
 
         requestPermissionLauncher = registerForActivityResult(
             ActivityResultContracts.RequestMultiplePermissions()) { permissionAndGrant ->
@@ -373,9 +387,10 @@ class ComposeActivity : ComponentActivity() {
             false
 
     private fun isNotificationServiceRunning(): Boolean {
-        val enabledNotificationListeners =
-            Settings.Secure.getString(contentResolver, "enabled_notification_listeners")
-        return enabledNotificationListeners?.contains(packageName) == true
+        val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
+        return notificationManager.isNotificationListenerAccessGranted(
+            ComponentName(this@ComposeActivity, NotificationListener::class.java)
+        )
     }
 
     private fun initTTS() {
@@ -535,7 +550,7 @@ class ComposeActivity : ComponentActivity() {
     }
 
     private fun onRequestReadNotificationsPermission() {
-        startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
+        startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS))
     }
 
     private fun onRequestShowNotificationPermission() {
@@ -585,7 +600,10 @@ fun MainScreen(
     val randomVoice by BTRMDataStore.getValueFlow(RANDOM_VOICE, context).collectAsState(initial = false)
 
     Scaffold(
-        contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Bottom),
+        //contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Bottom),
+        modifier = Modifier
+            .windowInsetsPadding(WindowInsets.systemBars)
+            .consumeWindowInsets(WindowInsets.statusBars),
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
         },
@@ -614,8 +632,10 @@ fun MainScreen(
                         )
                     }
                 },
-                windowInsets = WindowInsets(top = 0.dp),
-                modifier = Modifier.background(MaterialTheme.colorScheme.primary)
+                //windowInsets = WindowInsets(top = 0.dp),
+                modifier = Modifier
+                //    .windowInsetsPadding(WindowInsets.statusBars)
+                //    .background(MaterialTheme.colorScheme.primary)
             )
         }
     ) { paddingValues ->

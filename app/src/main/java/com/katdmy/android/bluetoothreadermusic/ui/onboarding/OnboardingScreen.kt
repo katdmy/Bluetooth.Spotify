@@ -58,7 +58,9 @@ fun OnboardingScreen(
     val permissionState = viewModel.permissionState.collectAsState()
 
     Column(
-        modifier = modifier.fillMaxSize().padding(16.dp),
+        modifier = modifier
+            .fillMaxSize()
+            .padding(16.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -67,26 +69,32 @@ fun OnboardingScreen(
         HorizontalPager(
             state = pagerState
         ) { page ->
-            when(page) {
+            when (page) {
                 0 -> OnboardingPage(
                     title = stringResource(R.string.onboarding_welcome_title),
                     description = stringResource(R.string.onboarding_welcome_description),
                     imageRes = R.drawable.ic_welcome
                 )
+
                 1 -> OnboardingPage(
                     title = stringResource(R.string.onboarding_read_notifications_title),
-                    description = stringResource(R.string.onboarding_read_notifications_description, getAppName()),
+                    description = stringResource(
+                        R.string.onboarding_read_notifications_description,
+                        getAppName()
+                    ),
                     imageRes = R.drawable.ic_read_notifications,
                     permissionGranted = permissionState.value.readNotifications,
                     buttonText = stringResource(R.string.open_permissions_menu),
                     onButtonClick = onRequestReadNotificationsPermission
                 )
+
                 2 -> OnboardingPage(
                     title = stringResource(R.string.onboarding_tts_title),
                     description = stringResource(R.string.onboarding_tts_description),
                     imageRes = R.drawable.ic_tts,
                     onChangeUseTTS = onChangeUseTTS
                 )
+
                 3 -> OnboardingPage(
                     title = stringResource(R.string.onboarding_post_notification_title),
                     description = stringResource(R.string.onboarding_post_notification_description),
@@ -95,6 +103,7 @@ fun OnboardingScreen(
                     buttonText = stringResource(R.string.enable_permission),
                     onButtonClick = onRequestShowNotificationPermission
                 )
+
                 4 -> OnboardingPage(
                     title = stringResource(R.string.onboarding_bt_status_title),
                     description = stringResource(R.string.onboarding_bt_status_description),
@@ -109,17 +118,31 @@ fun OnboardingScreen(
         Spacer(modifier = Modifier.weight(1f))
 
         Row(
-            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp)
+            modifier = Modifier
+                .padding(bottom = 16.dp)
+                .fillMaxWidth()
         ) {
             Spacer(modifier = Modifier.weight(1f))
             if (pagerState.currentPage > 0) {
-                Button(onClick = { coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage - 1) } }) {
+                Button(onClick = {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(
+                            pagerState.currentPage - 1
+                        )
+                    }
+                }) {
                     Text(text = stringResource(R.string.onboarding_back))
                 }
                 Spacer(modifier = Modifier.weight(1f))
             }
             if (pagerState.currentPage < pagesCount - 1) {
-                Button(onClick = { coroutineScope.launch { pagerState.animateScrollToPage(pagerState.currentPage + 1) } }) {
+                Button(onClick = {
+                    coroutineScope.launch {
+                        pagerState.animateScrollToPage(
+                            pagerState.currentPage + 1
+                        )
+                    }
+                }) {
                     Text(text = stringResource(R.string.onboarding_next))
                 }
             } else {

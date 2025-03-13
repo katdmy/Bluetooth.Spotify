@@ -76,6 +76,11 @@ class NotificationListener : NotificationListenerService() {
         listeningCommunicator = ListeningCommunicator()
 
         CoroutineScope(Dispatchers.IO).launch {
+            val useTTS = BTRMDataStore.getValue(USE_TTS_SF, this@NotificationListener)
+            createNotification(useTTS == true)
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
             BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener).collectLatest { useTTS ->
                 createNotification(useTTS == true)
                 switchTTS(useTTS == true)
