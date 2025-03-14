@@ -7,6 +7,7 @@ This Privacy Policy describes how your mobile application, Bluetooth Notificatio
 
 2. Data Collection
 The application does not collect, transmit, or store any personal data, including any information about notifications received by your device.
+However, the application requests permission to access location data (both coarse and precise). We do not use, process, or transmit location data in any way. This permission is required solely to check the Bluetooth connection state, which is used to automatically enable or disable the notification reading function.
 
 3. Data Usage
 The application operates entirely on your device. Its functionality is limited to the following actions:
