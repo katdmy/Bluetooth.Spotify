@@ -142,20 +142,7 @@ class ComposeActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
-        // Включаем Edge-to-Edge
-        //WindowCompat.setDecorFitsSystemWindows(window, false)
-        //window.addFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS)
 
-        /*// Определяем, включена ли светлая тема
-        val isLightTheme = resources.configuration.uiMode and
-                android.content.res.Configuration.UI_MODE_NIGHT_MASK ==
-                android.content.res.Configuration.UI_MODE_NIGHT_NO
-
-        // Контролируем цвет иконок статус-бара
-        val insetsController = WindowInsetsControllerCompat(window, window.decorView)
-        insetsController.isAppearanceLightStatusBars = isLightTheme
-        insetsController.isAppearanceLightNavigationBars = isLightTheme
-*/
         notificationBroadcastReceiver = NotificationBroadcastReceiver(
             addLogRecord = viewModel::onAddLogMessage
         )
@@ -176,7 +163,9 @@ class ComposeActivity : ComponentActivity() {
             ActivityResultContracts.RequestMultiplePermissions()) { permissionAndGrant ->
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     if (permissionAndGrant.keys.contains(Manifest.permission.POST_NOTIFICATIONS)) {
-                        viewModel.onSetPostNotificationPermission(permissionAndGrant[Manifest.permission.POST_NOTIFICATIONS] == true)
+                        viewModel.onSetPostNotificationPermission(
+                            permissionAndGrant[Manifest.permission.POST_NOTIFICATIONS] == true
+                        )
                     }
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
