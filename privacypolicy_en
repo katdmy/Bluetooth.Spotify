@@ -14,6 +14,7 @@ The application operates entirely on your device. Its functionality is limited t
 - Receiving notifications on your device.
 - Comparing received notifications with categories specified by you in the app settings.
 - Announcing notifications using the Text-To-Speech function if they match the selected categories.
+- Requesting access to location data only to check the Bluetooth connection state. The actual location data is neither used, processed, nor transmitted.
 No data is transmitted to the developer, third parties, or external servers.
 
 4. Data Protection
