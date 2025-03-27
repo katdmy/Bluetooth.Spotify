@@ -3,19 +3,22 @@ package com.katdmy.android.bluetoothreadermusic.ui.main
 import android.Manifest
 import android.annotation.SuppressLint
 import android.app.NotificationManager
+import android.content.ActivityNotFoundException
 import android.content.ComponentName
+import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
+import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
-//import android.util.Log
+import android.util.Log
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -110,6 +113,7 @@ import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
 import com.katdmy.android.bluetoothreadermusic.data.*
 import com.katdmy.android.bluetoothreadermusic.receivers.BtBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.receivers.NotificationBroadcastReceiver
+import com.katdmy.android.bluetoothreadermusic.services.ListenerStatusService
 import com.katdmy.android.bluetoothreadermusic.services.NotificationListener
 import com.katdmy.android.bluetoothreadermusic.ui.onboarding.OnboardingScreen
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
@@ -193,6 +197,9 @@ class ComposeActivity : ComponentActivity() {
                         NotificationListener::class.java
                     ), PackageManager.COMPONENT_ENABLED_STATE_ENABLED, PackageManager.DONT_KILL_APP
                 )
+
+                val intent = Intent(this@ComposeActivity, ListenerStatusService::class.java)
+                startForegroundService(intent)
             }
         }
 
@@ -283,7 +290,6 @@ class ComposeActivity : ComponentActivity() {
             }
         }
         setToModel(installedMusicApps)
-        //Log.e("InstalledMusicApps", installedMusicApps.toString())
 
         lifecycleScope.launch {
             val previouslySelectedMusicAppPackageName =
@@ -324,7 +330,6 @@ class ComposeActivity : ComponentActivity() {
             }
         }
         setToModel(installedMessengerApps)
-        //Log.e("InstalledMessengerApps", installedMessengerApps.toString())
     }
 
     private fun isAppInstalled(packageName: String): Boolean {
@@ -434,7 +439,6 @@ class ComposeActivity : ComponentActivity() {
             } else {
                 tts.speak(text, TextToSpeech.QUEUE_ADD, null, text)
             }
-            viewModel.onAddLogMessage(text)
         }
     }
 
@@ -453,7 +457,11 @@ class ComposeActivity : ComponentActivity() {
         lifecycleScope.launch {
             BTRMDataStore.saveValue(false, SERVICE_STARTED, this@ComposeActivity)
         }
+
+        val intent = Intent("com.katdmy.android.bluetoothreadermusic.stopStatusService")
+        sendBroadcast(intent)
     }
+
     private fun onClickStartService() {
         packageManager.setComponentEnabledSetting(
             ComponentName(
@@ -461,6 +469,7 @@ class ComposeActivity : ComponentActivity() {
                 NotificationListener::class.java
             ), PackageManager.COMPONENT_ENABLED_STATE_DISABLED, PackageManager.DONT_KILL_APP
         )
+        Thread.sleep(500)
         packageManager.setComponentEnabledSetting(
             ComponentName(
                 this,
@@ -475,11 +484,33 @@ class ComposeActivity : ComponentActivity() {
             BTRMDataStore.saveValue(true, SERVICE_STARTED, this@ComposeActivity)
             BTRMDataStore.saveValue(false, IGNORE_LACK_OF_PERMISSION, this@ComposeActivity)
         }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+            requestForegroundServicePermissionIfNeeded(this)
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            requestPermissions(arrayOf(Manifest.permission.FOREGROUND_SERVICE), 100)
+        }
+        val intent = Intent(this, ListenerStatusService::class.java)
+        startForegroundService(intent)
     }
 
     private fun onClickServiceStatus() {
         val result = if (isNotificationServiceRunning()) getString(R.string.service_started) else getString(R.string.service_stopped)
         Toast.makeText(this, result, Toast.LENGTH_SHORT).show()
+    }
+
+    fun requestForegroundServicePermissionIfNeeded(context: Context) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // API 34+
+            val intent = Intent("android.settings.ACTION_REQUEST_FOREGROUND_SERVICE_SPECIAL_USE_PERMISSION").apply {
+                data = Uri.parse("package:${context.packageName}")
+            }
+            try {
+                context.startActivity(intent)
+            } catch (e: ActivityNotFoundException) {
+                Log.e("MainActivity", "Foreground Service Special Use permission screen not found!", e)
+            }
+        }
     }
 
     private fun onSelectMusicApp(selectedMusicApp: MusicApp) {
@@ -509,7 +540,6 @@ class ComposeActivity : ComponentActivity() {
             else
                 enabledMessengersList.filter { it != messengerAppPackageName }.getString()
             BTRMDataStore.saveValue(newEnabledMessagesString, ENABLED_MESSENGERS, this@ComposeActivity)
-            //Log.e("ENABLED_MESSENGERS", newEnabledMessagesString)
         }
     }
 
@@ -589,7 +619,6 @@ fun MainScreen(
     val randomVoice by BTRMDataStore.getValueFlow(RANDOM_VOICE, context).collectAsState(initial = false)
 
     Scaffold(
-        //contentWindowInsets = WindowInsets.systemBars.only(WindowInsetsSides.Bottom),
         modifier = Modifier
             .windowInsetsPadding(WindowInsets.systemBars)
             .consumeWindowInsets(WindowInsets.statusBars),
@@ -621,10 +650,7 @@ fun MainScreen(
                         )
                     }
                 },
-                //windowInsets = WindowInsets(top = 0.dp),
                 modifier = Modifier
-                //    .windowInsetsPadding(WindowInsets.statusBars)
-                //    .background(MaterialTheme.colorScheme.primary)
             )
         }
     ) { paddingValues ->
@@ -844,7 +870,7 @@ fun SettingsScreenLayout(
                         modifier = Modifier
                             .weight(1f)
                             .padding(end = 8.dp),
-                        onClickAction = onClickStopService,
+                        onClickAction = { onClickStopService() },
                         icon = ImageVector.vectorResource(R.drawable.ic_stop) // Добавляем иконку
                     )
                     MyButton(
@@ -853,7 +879,7 @@ fun SettingsScreenLayout(
                             .weight(1f)
                             .padding(horizontal = 8.dp),
                         onClickAction = {
-                            onClickServiceStatus
+                            onClickServiceStatus()
                             if (!postNotificationPermissionGranted)
 
                                 scope.launch {
@@ -876,7 +902,7 @@ fun SettingsScreenLayout(
                             .weight(1f)
                             .padding(start = 8.dp),
                         onClickAction = {
-                            onClickStartService
+                            onClickStartService()
                             if (!readNotificationsPermissionGranted)
                                 scope.launch {
                                     val result = snackbarHostState.showSnackbar(
@@ -939,6 +965,22 @@ fun SettingsScreenLayout(
                 icon = ImageVector.vectorResource(R.drawable.volume_up) // Добавляем иконку
             )
         }
+
+        // Секция политики конфиденциальности
+
+        /*Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.elevatedCardElevation(4.dp)
+        ) {
+            MyButton(
+                text = stringResource(R.string.privacy_policy_button),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                onClickAction = onClickPrivacyPolicy,
+                icon = ImageVector.vectorResource(R.drawable.ic_privacy) // Добавляем иконку
+            )
+        }*/
     }
 }
 

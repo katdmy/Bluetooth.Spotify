@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">BT Reader + Music</string>
+    <string name="app_name">BT Reader</string>
     <string name="service_name">Notifications Listener</string>
     <string name="service_channel_name" translatable="false">notification_listener_service</string>
 
@@ -39,6 +39,7 @@
     <string name="music_app_header">Music app</string>
     <string name="random_voice_header">Use Different Voices</string>
     <string name="abandon_audiofocus">Abandon Audiofocus</string>
+    <string name="privacy_policy_button">Privacy Policy</string>
 
     <string name="service_header">Service Controls</string>
     <string name="service_stop">Stop</string>
@@ -53,9 +54,11 @@
 
     <string name="stopTTS">Stop Audio</string>
     <string name="startTTS">Start Audio</string>
+    <string name="restartService">Restart Reader</string>
     <string name="stopService">Stop service</string>
     <string name="notification_title_tts_on">Awaiting Notifications</string>
     <string name="notification_title_tts_off">Reader is inactive</string>
+    <string name="notification_title_error">Service Error</string>
 
     <string name="bt_disconnected">DISCONNECTED</string>
     <string name="bt_connecting">CONNECTING</string>

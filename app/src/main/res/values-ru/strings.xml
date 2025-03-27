@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">BT Reader + Music</string>
+    <string name="app_name">BT Reader</string>
     <string name="service_name">Получение уведомлений</string>
 
     <string name="onboarding_welcome_title">Добро пожаловать!</string>
@@ -31,6 +31,7 @@
     <string name="service_stopped">СЕРВИС ОСТАНОВЛЕН</string>
     <string name="settings_header">Настройки</string>
     <string name="main_screen_header">Bluetooth-читалка уведомлений</string>
+
     <string name="mode_switch_header">Выбор режима уведомлений</string>
     <string name="mode_switch_allapps">Все приложения</string>
     <string name="mode_switch_messengers">Мессенджеры</string>
@@ -38,6 +39,8 @@
     <string name="music_app_header">Музыка</string>
     <string name="random_voice_header">Читать разными голосами</string>
     <string name="abandon_audiofocus">Сбросить аудиофокус</string>
+    <string name="privacy_policy_button">Политика конфиденциальности</string>
+
     <string name="service_header">Управление сервисом</string>
     <string name="service_stop">Стоп</string>
     <string name="service_info">Инфо</string>
@@ -48,11 +51,15 @@
     <string name="text_to_speech">Чтение уведомлений</string>
     <string name="music_header">Музыка</string>
     <string name="music_open">Открыть %s</string>
+
     <string name="stopTTS">Остановить чтение</string>
     <string name="startTTS">Начать чтение</string>
+    <string name="restartService">Перезапустить</string>
     <string name="stopService">Выключить сервис</string>
     <string name="notification_title_tts_on">Ожидание уведомлений</string>
     <string name="notification_title_tts_off">Сервис неактивен</string>
+    <string name="notification_title_error">Ошибка сервиса</string>
+
     <string name="bt_disconnected">ОТКЛЮЧЕН</string>
     <string name="bt_connecting">ПОДКЛЮЧЕНИЕ</string>
     <string name="bt_connected">ПОДКЛЮЧЕН</string>
