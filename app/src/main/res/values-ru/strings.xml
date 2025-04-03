@@ -65,4 +65,7 @@
     <string name="bt_connected">ПОДКЛЮЧЕН</string>
     <string name="bt_disconnecting">ОТКЛЮЧЕНИЕ</string>
     <string name="bt_error">ошибка</string>
+
+    <string name="privacy_policy_header">Политика конфиденц-ти</string>
+    <string name="privacy_policy_url">https://sweden-gate.duckdns.org/btreader/privacypolicy_ru.htm</string>
 </resources>

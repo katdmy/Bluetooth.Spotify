@@ -22,10 +22,17 @@ import android.os.Looper
 import android.provider.Settings
 import android.service.notification.StatusBarNotification
 import androidx.core.app.ServiceCompat
+import com.katdmy.android.bluetoothreadermusic.data.NotificationState
 import com.katdmy.android.bluetoothreadermusic.R
-import com.katdmy.android.bluetoothreadermusic.ui.main.ComposeActivity
+import com.katdmy.android.bluetoothreadermusic.ui.views.ComposeActivity
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 class ListenerStatusService: Service() {
@@ -33,6 +40,7 @@ class ListenerStatusService: Service() {
     private val FOREGROUND_NOTIFICATION_ID = 10001
     private lateinit var statusServiceCommunicator: StatusServiceCommunicator
     private lateinit var currentState: NotificationState
+    private var scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
     private val handler = Handler(Looper.getMainLooper())
 
     override fun onCreate() {
@@ -75,6 +83,15 @@ class ListenerStatusService: Service() {
         }
 
         startChecking()
+
+        if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
+        scope.launch {
+            BTRMDataStore.getValueFlow(USE_TTS_SF, this@ListenerStatusService).collectLatest { _ ->
+                stopChecking()
+                startChecking()
+            }
+        }
+
         return START_STICKY
     }
 
@@ -85,6 +102,9 @@ class ListenerStatusService: Service() {
             //Log.e("ListenerStatusService", "Receiver was not registered", e)
         }
         stopChecking()
+        if (scope.isActive) {
+            scope.cancel()
+        }
         super.onDestroy()
     }
 
@@ -282,8 +302,3 @@ class ListenerStatusService: Service() {
     }
 }
 
-sealed class NotificationState() {
-    object ListenerError: NotificationState()
-    object UseTTS: NotificationState()
-    object NoUseTTS: NotificationState()
-}

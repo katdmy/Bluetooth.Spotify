@@ -92,7 +92,6 @@ class NotificationListener : NotificationListenerService() {
             addAction("com.katdmy.android.bluetoothreadermusic.stopServiceIntentClick")
             addAction("com.katdmy.android.bluetoothreadermusic.getStatus")
             addAction("com.katdmy.android.bluetoothreadermusic.abandonAudiofocus")
-            addAction("com.katdmy.android.bluetoothreadermusic.DISMISSED_ACTION")
             addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED")
         }
         @SuppressLint("UnspecifiedRegisterReceiverFlag")
@@ -167,8 +166,9 @@ class NotificationListener : NotificationListenerService() {
         if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
         scope.launch {
             val useTTS = BTRMDataStore.getValue(USE_TTS_SF, this@NotificationListener)
+            val serviceStarted = BTRMDataStore.getValue(SERVICE_STARTED, this@NotificationListener)
 
-            if (useTTS == true) {
+            if (useTTS == true && serviceStarted == true) {
                 val ttsMode = BTRMDataStore.getValue(TTS_MODE, this@NotificationListener)
                 when (ttsMode) {
                     0 -> {
@@ -251,12 +251,12 @@ class NotificationListener : NotificationListenerService() {
                     }
                 }
                 "stopServiceIntentClick" -> {
-                    val pm = context.packageManager
+                    /* val pm = context.packageManager
                     pm.setComponentEnabledSetting(
                         ComponentName(context, NotificationListener::class.java),
                         PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
                         PackageManager.DONT_KILL_APP
-                    )
+                    ) */
                     if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
                     scope.launch {
                         BTRMDataStore.saveValue(false, SERVICE_STARTED, this@NotificationListener)
@@ -265,13 +265,6 @@ class NotificationListener : NotificationListenerService() {
                 }
                 "abandonAudiofocus" -> {
                     audioManager.abandonAudioFocusRequest(focusRequest)
-                }
-                "DISMISSED_ACTION" -> {
-                    if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
-                    scope.launch {
-                        val useTTS = BTRMDataStore.getValue(USE_TTS_SF, this@NotificationListener)
-                        switchTTS(useTTS == true)
-                    }
                 }
                 "CONNECTION_STATE_CHANGED" -> {
                     when (intent.extras?.getInt(BluetoothProfile.EXTRA_STATE)) {

@@ -21,7 +21,7 @@ object Constants {
     val USE_TTS_SF = booleanPreferencesKey("USE_TTS_SF")
 
     /*
-    SERVICE_STARTED - variable for autostart service in case of emergency stop
+    SERVICE_STARTED - variable disabling service work even on bluetooth connection and usetts=true
     */
     val SERVICE_STARTED = booleanPreferencesKey("SERVICE_STARTED")
 

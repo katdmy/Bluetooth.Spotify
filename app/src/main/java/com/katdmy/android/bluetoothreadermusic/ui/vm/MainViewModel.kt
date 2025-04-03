@@ -1,4 +1,4 @@
-package com.katdmy.android.bluetoothreadermusic.ui.main
+package com.katdmy.android.bluetoothreadermusic.ui.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
