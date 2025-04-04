@@ -26,6 +26,7 @@
     <string name="tts_test_label">Speech Synthesis Test</string>
     <string name="tts_read">Speak</string>
     <string name="tts_stop">Stop speaking</string>
+    <string name="low_volume">Turn up the playback volume</string>
 
     <string name="service_started">SERVICE STARTED</string>
     <string name="service_stopped">SERVICE STOPPED</string>

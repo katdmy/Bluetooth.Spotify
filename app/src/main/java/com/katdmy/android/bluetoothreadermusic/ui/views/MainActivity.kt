@@ -371,6 +371,8 @@ class ComposeActivity : ComponentActivity() {
     }
 
     private fun onClickReadTestText(text: String) {
+        if (getCurrentVolumePercent() < 10)
+            Toast.makeText(this, getString(R.string.low_volume), Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
             val randomVoice = BTRMDataStore.getValue(RANDOM_VOICE, this@ComposeActivity)
             if (randomVoice == true) {
@@ -389,6 +391,13 @@ class ComposeActivity : ComponentActivity() {
     private fun onClickStopReading() {
         tts.stop()
         viewModel.onSetReadingTestText(false)
+    }
+
+    private fun getCurrentVolumePercent(): Int {
+        val audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
+        val currentVolume = audioManager.getStreamVolume(AudioManager.STREAM_MUSIC)
+        val maxVolume = audioManager.getStreamMaxVolume(AudioManager.STREAM_MUSIC)
+        return (currentVolume * 100) / maxVolume
     }
 
     private fun onClickStopService() {

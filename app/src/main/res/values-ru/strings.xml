@@ -26,6 +26,7 @@
     <string name="tts_test_label">Тест синтеза речи"</string>
     <string name="tts_read">Озвучить</string>
     <string name="tts_stop">Остановить чтение</string>
+    <string name="low_volume">Увеличьте громкость воспроизведения</string>
 
     <string name="service_started">СЕРВИС ЗАПУЩЕН</string>
     <string name="service_stopped">СЕРВИС ОСТАНОВЛЕН</string>
