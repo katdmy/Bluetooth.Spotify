@@ -10,7 +10,6 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PROJECTION" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.VIBRATE" />
@@ -59,7 +58,7 @@
         <service
             android:name=".services.ListenerStatusService"
             android:exported="false"
-            android:foregroundServiceType="specialUse|mediaPlayback|mediaProjection"
+            android:foregroundServiceType="specialUse|mediaPlayback"
             android:label="@string/service_name" >
 
             <property
