@@ -25,7 +25,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
-import com.katdmy.android.bluetoothreadermusic.data.MusicApp
+import com.katdmy.android.bluetoothreadermusic.data.models.MusicApp
 
 @Composable
 fun MusicAppRow(

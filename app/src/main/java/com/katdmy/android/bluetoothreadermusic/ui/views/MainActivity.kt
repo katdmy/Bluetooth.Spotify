@@ -42,6 +42,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -71,11 +72,12 @@ import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.util.Constants.MUSIC_PACKAGE_NAME
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
 import com.katdmy.android.bluetoothreadermusic.data.*
+import com.katdmy.android.bluetoothreadermusic.data.models.MessengerApp
+import com.katdmy.android.bluetoothreadermusic.data.models.MusicApp
 import com.katdmy.android.bluetoothreadermusic.receivers.BtBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.receivers.NotificationBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.services.ListenerStatusService
 import com.katdmy.android.bluetoothreadermusic.services.NotificationListener
-import com.katdmy.android.bluetoothreadermusic.ui.onboarding.OnboardingScreen
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.ui.vm.MainViewModel
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
@@ -585,18 +587,29 @@ fun MainLayout(
                         }
                     }
                 },
+                navigationIcon = {
+                    if (navigation != Navigation.Main)
+                        IconButton(onClick = {
+                            navigation = when (navigation) {
+                                Navigation.SettingsScreen -> Navigation.Main
+                                Navigation.PrivacyPolicyScreeen -> Navigation.SettingsScreen
+                                else -> Navigation.Main
+                            }
+                        } ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Default.ArrowBack,
+                                contentDescription = "Back"
+                            )
+                        }
+                },
                 actions = {
-                    IconButton(onClick = {
-                        navigation = if (navigation != Navigation.SettingsScreen)
-                            Navigation.SettingsScreen
-                        else
-                            Navigation.Main
-                    } ) {
-                        Icon(
-                            imageVector = Icons.Default.Settings,
-                            contentDescription = "Open/close settings"
-                        )
-                    }
+                    if (navigation == Navigation.Main)
+                        IconButton(onClick = { navigation = Navigation.SettingsScreen } ) {
+                            Icon(
+                                imageVector = Icons.Default.Settings,
+                                contentDescription = "Open/close settings"
+                            )
+                        }
                 },
                 modifier = Modifier
             )

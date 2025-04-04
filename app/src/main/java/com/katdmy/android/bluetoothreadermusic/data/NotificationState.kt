@@ -1,4 +1,4 @@
-package com.katdmy.android.bluetoothreadermusic.data;
+package com.katdmy.android.bluetoothreadermusic.data
 
 sealed class NotificationState {
     object ListenerError: NotificationState()

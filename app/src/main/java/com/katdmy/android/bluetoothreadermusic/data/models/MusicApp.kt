@@ -1,4 +1,4 @@
-package com.katdmy.android.bluetoothreadermusic.data
+package com.katdmy.android.bluetoothreadermusic.data.models
 
 import android.content.Intent
 import android.graphics.drawable.Drawable

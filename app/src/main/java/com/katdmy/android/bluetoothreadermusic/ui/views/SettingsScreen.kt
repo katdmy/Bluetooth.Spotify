@@ -36,8 +36,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.katdmy.android.bluetoothreadermusic.R
-import com.katdmy.android.bluetoothreadermusic.data.MessengerApp
-import com.katdmy.android.bluetoothreadermusic.data.MusicApp
+import com.katdmy.android.bluetoothreadermusic.data.models.MessengerApp
+import com.katdmy.android.bluetoothreadermusic.data.models.MusicApp
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.BtReaderButton
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.MessengerAppColumn

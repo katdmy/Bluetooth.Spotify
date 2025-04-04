@@ -3,7 +3,6 @@ package com.katdmy.android.bluetoothreadermusic.services
 import android.annotation.SuppressLint
 import android.bluetooth.BluetoothProfile
 import android.content.*
-import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager

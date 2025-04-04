@@ -1,4 +1,4 @@
-package com.katdmy.android.bluetoothreadermusic.ui.onboarding
+package com.katdmy.android.bluetoothreadermusic.ui.views
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween

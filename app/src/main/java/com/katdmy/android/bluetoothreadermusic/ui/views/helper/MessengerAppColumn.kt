@@ -23,7 +23,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.katdmy.android.bluetoothreadermusic.R
-import com.katdmy.android.bluetoothreadermusic.data.MessengerApp
+import com.katdmy.android.bluetoothreadermusic.data.models.MessengerApp
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getList
 import kotlin.collections.forEach
 

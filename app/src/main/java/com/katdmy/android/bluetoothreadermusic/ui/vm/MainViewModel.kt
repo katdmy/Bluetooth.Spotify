@@ -2,7 +2,10 @@ package com.katdmy.android.bluetoothreadermusic.ui.vm
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.katdmy.android.bluetoothreadermusic.data.*
+import com.katdmy.android.bluetoothreadermusic.data.models.MainUiModel
+import com.katdmy.android.bluetoothreadermusic.data.models.MessengerApp
+import com.katdmy.android.bluetoothreadermusic.data.models.MusicApp
+import com.katdmy.android.bluetoothreadermusic.data.models.GrantedPermissions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -15,8 +18,8 @@ class MainViewModel : ViewModel() {
     private val _isReadingTestText = MutableStateFlow(false)
     val isReadingTestText: StateFlow<Boolean> = _isReadingTestText.asStateFlow()
 
-    private val _permissionState = MutableStateFlow(PermissionsGranted())
-    val permissionState: StateFlow<PermissionsGranted> = _permissionState.asStateFlow()
+    private val _permissionState = MutableStateFlow(GrantedPermissions())
+    val permissionState: StateFlow<GrantedPermissions> = _permissionState.asStateFlow()
 
     init {
         onSetReadingTestText(false)
