@@ -135,7 +135,7 @@ class ListenerStatusService: Service() {
                 icon = R.drawable.ic_outline_notifications
             }
             NotificationState.UseTTS -> {
-                switchTTSIntent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationStartTTSClick")
+                switchTTSIntent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationStopTTSClick")
                 notificationActionButtonLabel = getString(R.string.stopTTS)
                 contentTitle = getText(R.string.notification_title_tts_on)
                 icon = R.drawable.ic_notifications
