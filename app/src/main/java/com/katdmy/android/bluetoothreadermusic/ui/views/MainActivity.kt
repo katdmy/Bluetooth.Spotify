@@ -12,7 +12,6 @@ import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
@@ -92,6 +91,7 @@ import com.katdmy.android.bluetoothreadermusic.util.Constants.SERVICE_STARTED
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
 import kotlinx.coroutines.launch
 import java.util.Locale
+import androidx.core.net.toUri
 
 class ComposeActivity : ComponentActivity() {
 
@@ -134,14 +134,12 @@ class ComposeActivity : ComponentActivity() {
                         )
                     }
                 }
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    if (permissionAndGrant.keys.contains(Manifest.permission.BLUETOOTH_CONNECT)) {
-                        viewModel.onSetBTStatusPermission(permissionAndGrant[Manifest.permission.BLUETOOTH_CONNECT] == true)
-                        if (permissionAndGrant[Manifest.permission.BLUETOOTH_CONNECT] == true)
-                            getInitialBluetoothStatus(viewModel::onChangeBtStatus)
-                    }
-                }
+            if (permissionAndGrant.keys.contains(Manifest.permission.BLUETOOTH_CONNECT)) {
+                viewModel.onSetBTStatusPermission(permissionAndGrant[Manifest.permission.BLUETOOTH_CONNECT] == true)
+                if (permissionAndGrant[Manifest.permission.BLUETOOTH_CONNECT] == true)
+                    getInitialBluetoothStatus(viewModel::onChangeBtStatus)
             }
+        }
 
         registerReceivers()
         val intent = Intent(this@ComposeActivity, ListenerStatusService::class.java)
@@ -195,10 +193,8 @@ class ComposeActivity : ComponentActivity() {
 
         val btPermission = checkBtPermission()
         viewModel.onSetBTStatusPermission(btPermission)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (btPermission == true)
-                getInitialBluetoothStatus(viewModel::onChangeBtStatus)
-        }
+        if (btPermission == true)
+            getInitialBluetoothStatus(viewModel::onChangeBtStatus)
     }
 
     override fun onDestroy() {
@@ -319,10 +315,7 @@ class ComposeActivity : ComponentActivity() {
             false
 
     private fun checkBtPermission() : Boolean =
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
-        } else
-            false
+        checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) == PackageManager.PERMISSION_GRANTED
 
     private fun isNotificationServiceRunning(): Boolean {
         val notificationManager = getSystemService(NOTIFICATION_SERVICE) as NotificationManager
@@ -450,7 +443,7 @@ class ComposeActivity : ComponentActivity() {
     fun requestForegroundServicePermissionIfNeeded(context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) { // API 34+
             val intent = Intent("android.settings.ACTION_REQUEST_FOREGROUND_SERVICE_SPECIAL_USE_PERMISSION").apply {
-                data = Uri.parse("package:${context.packageName}")
+                data = "package:${context.packageName}".toUri()
             }
             try {
                 context.startActivity(intent)
@@ -526,9 +519,7 @@ class ComposeActivity : ComponentActivity() {
     }
 
     private fun onRequestBtPermission() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            requestPermissionLauncher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
-        }
+        requestPermissionLauncher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
     }
 }
 

@@ -19,8 +19,8 @@ import androidx.compose.ui.unit.dp
 fun BtReaderButton(
     text: String,
     onClickAction: () -> Unit,
-    icon: ImageVector? = null,
     modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
     enabled: Boolean = true
 ) {
     ElevatedButton(

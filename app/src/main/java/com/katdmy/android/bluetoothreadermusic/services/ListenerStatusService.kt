@@ -130,13 +130,13 @@ class ListenerStatusService: Service() {
             }
             NotificationState.NoUseTTS -> {
                 switchTTSIntent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationStartTTSClick")
-                notificationActionButtonLabel = getString(R.string.stopTTS)
+                notificationActionButtonLabel = getString(R.string.startTTS)
                 contentTitle = getText(R.string.notification_title_tts_off)
                 icon = R.drawable.ic_outline_notifications
             }
             NotificationState.UseTTS -> {
                 switchTTSIntent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationStartTTSClick")
-                notificationActionButtonLabel = getString(R.string.startTTS)
+                notificationActionButtonLabel = getString(R.string.stopTTS)
                 contentTitle = getText(R.string.notification_title_tts_on)
                 icon = R.drawable.ic_notifications
             }
