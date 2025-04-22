@@ -68,5 +68,5 @@
     <string name="bt_error">error</string>
 
     <string name="privacy_policy_header">Privacy Policy</string>
-    <string name="privacy_policy_url">https://sweden-gate.duckdns.org/btreader/privacypolicy_en.htm</string>
+    <string name="privacy_policy_url">https://btreader.wuaze.com/privacypolicy_en.htm</string>
 </resources>
