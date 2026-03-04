@@ -10,62 +10,52 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
-import androidx.compose.material3.SnackbarDuration
-import androidx.compose.material3.SnackbarHostState
-import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.katdmy.android.bluetoothreadermusic.R
-import com.katdmy.android.bluetoothreadermusic.data.models.MessengerApp
-import com.katdmy.android.bluetoothreadermusic.data.models.MusicApp
+import com.katdmy.android.bluetoothreadermusic.data.ServiceStatus
+import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
+import com.katdmy.android.bluetoothreadermusic.services.StatusService
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
+import com.katdmy.android.bluetoothreadermusic.ui.views.helper.AppChooseDialog
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.BtReaderButton
-import com.katdmy.android.bluetoothreadermusic.ui.views.helper.MessengerAppColumn
-import com.katdmy.android.bluetoothreadermusic.ui.views.helper.MusicAppRow
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
+import com.katdmy.android.bluetoothreadermusic.ui.views.helper.InstalledAppColumn
+import com.katdmy.android.bluetoothreadermusic.ui.views.helper.ServiceHealthIndicator
 
 @Composable
 fun SettingsScreen(
-    scope: CoroutineScope,
-    snackbarHostState: SnackbarHostState,
     ttsModeSelection: Int?,
-    installedMessengers: ArrayList<MessengerApp>,
-    enabledMessengerString: String?,
-    installedMusicApps: ArrayList<MusicApp>,
-    selectedMusicApp: MusicApp,
+    addedApps: List<InstalledApp>,
     randomVoice: Boolean?,
     postNotificationPermissionGranted: Boolean,
     readNotificationsPermissionGranted: Boolean,
     btStatusPermissionGranted: Boolean,
     btStatus: String,
+    onGetInstalledLaunchableApps: () -> List<InstalledApp>,
     onSetTtsMode: (Int) -> Unit,
-    onCheckedChangeMessengerApp: (String, Boolean) -> Unit,
-    onSelectMusicApp: (MusicApp) -> Unit,
+    onClickDeleteApp: (String) -> Unit,
+    onClickAddApp: (List<String>) -> Unit,
     onSetRandomVoice: (Boolean) -> Unit,
-    onClickStopService: () -> Unit,
-    onClickStartService: () -> Unit,
-    onClickServiceStatus: () -> Unit,
+    openNotificationSettings: () -> Unit,
     onClickRequestReadNotificationsPermission: () -> Unit,
     onClickRequestPostNotificationPermission: () -> Unit,
     onClickRequestBtPermission: () -> Unit,
@@ -73,11 +63,12 @@ fun SettingsScreen(
     onClickPrivacyPolicy: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
+    val serviceHealth by StatusService.serviceHealth.collectAsState()
     val options = listOf(
         stringResource(R.string.mode_switch_allapps),
-        stringResource(R.string.mode_switch_messengers)
+        stringResource(R.string.mode_switch_selected)
     )
+    var openAppChooseDialog by remember { mutableStateOf(false) }
 
     // Используем фон, чтобы разделить карточки и создать ощущение глубины
     Column(
@@ -87,8 +78,100 @@ fun SettingsScreen(
             .padding(12.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        // Секция переключения уведомлений по мессенджерам
+        // Карточка состояния сервиса
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.elevatedCardElevation(4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Row(
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(
+                        text = stringResource(R.string.service_header),
+                        style = MaterialTheme.typography.headlineSmall
+                    )
+                    ServiceHealthIndicator(
+                        onClick = onClickRequestReadNotificationsPermission
+                    )
+                }
+                Spacer(modifier = Modifier.height(8.dp))
+                if (!readNotificationsPermissionGranted) {
+                    Text(
+                        text = stringResource(R.string.no_read_notifications_permission),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    BtReaderButton(
+                        text = stringResource(R.string.open_settings),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        onClickAction = openNotificationSettings,
+                        painter = painterResource(R.drawable.ic_settings)
+                    )
+                } else if (!postNotificationPermissionGranted) {
+                    Text(
+                        text = stringResource(R.string.no_post_notification_permission),
+                        style = MaterialTheme.typography.bodyLarge,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
+                    BtReaderButton(
+                        text = stringResource(R.string.open_settings),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
+                        onClickAction = onClickRequestPostNotificationPermission,
+                        painter = painterResource(R.drawable.ic_notifications)
+                    )
+                } else {
+                    when (serviceHealth) {
+                        ServiceStatus.Dead -> {
+                            Text(
+                                text = stringResource(R.string.service_not_responding),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                            BtReaderButton(
+                                text = stringResource(R.string.open_settings),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp),
+                                onClickAction = openNotificationSettings,
+                                painter = painterResource(R.drawable.ic_settings)
+                            )
+                        }
+                        ServiceStatus.Disabled -> {
+                            Text(
+                                text = stringResource(R.string.service_stopped),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                            BtReaderButton(
+                                text = stringResource(R.string.open_settings),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 8.dp),
+                                onClickAction = openNotificationSettings,
+                                painter = painterResource(R.drawable.ic_settings)
+                            )
 
+                        }
+                        ServiceStatus.Working -> {
+                            Text(
+                                text = stringResource(R.string.service_working),
+                                style = MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
+        // Секция переключения уведомлений по приложениям
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.elevatedCardElevation(4.dp)
@@ -117,33 +200,25 @@ fun SettingsScreen(
                     }
                 }
 
-                if (installedMessengers.count() > 0) {
-                    Spacer(modifier = Modifier.height(8.dp))
-                    MessengerAppColumn(
-                        installedMessengerApps = installedMessengers,
-                        enabledMessengerString = enabledMessengerString,
+                if (addedApps.count() > 0) {
+                    InstalledAppColumn(
+                        installedApps = addedApps,
                         enabled = ttsModeSelection == 1,
-                        onCheckedChangeMessengerApp = onCheckedChangeMessengerApp
+                        onClickDeleteApp = onClickDeleteApp,
+                        modifier = Modifier.padding(top = 8.dp)
                     )
                 }
-            }
-        }
-
-        if (installedMusicApps.count() > 0) {
-            // Секция выбора музыкального приложения
-
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                elevation = CardDefaults.elevatedCardElevation(4.dp)
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Text(text = stringResource(R.string.music_app_header), style = MaterialTheme.typography.headlineSmall)
-                    Spacer(modifier = Modifier.height(8.dp))
-                    MusicAppRow(
-                        installedMusicApps = installedMusicApps,
-                        selectedMusicApp = selectedMusicApp,
-                        onSelectMusicApp = onSelectMusicApp,
-                        modifier = Modifier.fillMaxWidth()
+                Row(
+                    horizontalArrangement = Arrangement.Center,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    BtReaderButton(
+                        text = stringResource(R.string.add_installed_app),
+                        onClickAction = { openAppChooseDialog = true },
+                        painter = painterResource(R.drawable.ic_add),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 8.dp),
                     )
                 }
             }
@@ -173,76 +248,6 @@ fun SettingsScreen(
             }
         }
 
-        // Карточка для управления сервисом
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            elevation = CardDefaults.elevatedCardElevation(4.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Text(
-                    text = stringResource(R.string.service_header),
-                    style = MaterialTheme.typography.headlineSmall
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                Row {
-                    BtReaderButton(
-                        text = stringResource(R.string.service_stop),
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(end = 8.dp),
-                        onClickAction = { onClickStopService() },
-                        icon = ImageVector.vectorResource(R.drawable.ic_stop) // Добавляем иконку
-                    )
-                    BtReaderButton(
-                        text = stringResource(R.string.service_info),
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(horizontal = 8.dp),
-                        onClickAction = {
-                            onClickServiceStatus()
-                            if (!postNotificationPermissionGranted)
-
-                                scope.launch {
-                                    val result = snackbarHostState.showSnackbar(
-                                        message = context.getString(R.string.no_post_notification_permission),
-                                        actionLabel = context.getString(R.string.enable_permission),
-                                        duration = SnackbarDuration.Long
-                                    )
-                                    when (result) {
-                                        SnackbarResult.ActionPerformed -> onClickRequestPostNotificationPermission()
-                                        SnackbarResult.Dismissed -> {}
-                                    }
-                                }
-                        },
-                        icon = Icons.Default.Info // Добавляем иконку
-                    )
-                    BtReaderButton(
-                        text = stringResource(R.string.service_start),
-                        modifier = Modifier
-                            .weight(1f)
-                            .padding(start = 8.dp),
-                        onClickAction = {
-                            onClickStartService()
-                            if (!readNotificationsPermissionGranted)
-                                scope.launch {
-                                    val result = snackbarHostState.showSnackbar(
-                                        message = context.getString(R.string.no_read_notifications_permission),
-                                        actionLabel = context.getString(R.string.enable_permission),
-                                        duration = SnackbarDuration.Long
-                                    )
-                                    when (result) {
-                                        SnackbarResult.ActionPerformed -> onClickRequestReadNotificationsPermission()
-                                        SnackbarResult.Dismissed -> {}
-                                    }
-                                }
-                        },
-                        icon = Icons.Default.PlayArrow // Добавляем иконку
-                    )
-                }
-
-            }
-        }
-
         // Секция для статуса Bluetooth
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -265,7 +270,10 @@ fun SettingsScreen(
                 else
                     BtReaderButton(
                         text = stringResource(R.string.enable_permission),
-                        onClickAction = onClickRequestBtPermission
+                        onClickAction = onClickRequestBtPermission,
+                        modifier = Modifier,
+                        painter = null,
+                        enabled = true
                     )
             }
         }
@@ -282,7 +290,7 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .padding(16.dp),
                 onClickAction = onClickAbandonAudiofocus,
-                icon = ImageVector.vectorResource(R.drawable.volume_up) // Добавляем иконку
+                painter = painterResource(R.drawable.volume_up) // Добавляем иконку
             )
         }
 
@@ -298,9 +306,19 @@ fun SettingsScreen(
                     .fillMaxWidth()
                     .padding(16.dp),
                 onClickAction = onClickPrivacyPolicy,
-                icon = ImageVector.vectorResource(R.drawable.ic_privacy) // Добавляем иконку
+                painter = painterResource(R.drawable.ic_privacy) // Добавляем иконку
             )
         }
+    }
+
+    if (openAppChooseDialog) {
+        val installedLaunchableApps = onGetInstalledLaunchableApps()
+        AppChooseDialog(
+            installedApps = installedLaunchableApps,
+            alreadyAdded = addedApps.map { it.packageName },
+            onClickAdd = onClickAddApp,
+            onDismiss = { openAppChooseDialog = false }
+        )
     }
 }
 
@@ -309,32 +327,22 @@ fun SettingsScreen(
 fun SettingsScreenPreview() {
     BtReaderMusicTheme {
         SettingsScreen(
-            scope = rememberCoroutineScope(),
-            snackbarHostState = SnackbarHostState(),
             ttsModeSelection = 1,
-            installedMessengers = arrayListOf(
-                MessengerApp("org.whatsapp", "Whatsapp", null),
-                MessengerApp("org.telegram.messenger", "Telegram", null),
-            ),
-            enabledMessengerString = null,
-            installedMusicApps = arrayListOf(
-                MusicApp("ru.yandex.music", null, "Яндекс Музыка", null),
-                MusicApp("com.spotify.music", null, "Spotify", null),
-                MusicApp("com.google.android.apps.youtube.music", null, "Youtube Music", null)
+            addedApps = listOf(
+                InstalledApp("org.whatsapp", "Whatsapp", null),
+                InstalledApp("org.telegram.messenger", "Telegram", null),
             ),
             randomVoice = false,
             postNotificationPermissionGranted = false,
             readNotificationsPermissionGranted = false,
             btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
-            selectedMusicApp = MusicApp("", null, "", null),
+            onGetInstalledLaunchableApps = { emptyList() },
             onSetTtsMode = {},
-            onCheckedChangeMessengerApp = { _, _ -> },
-            onSelectMusicApp = {},
+            onClickDeleteApp = {},
+            onClickAddApp = {},
             onSetRandomVoice = {},
-            onClickStopService = {},
-            onClickStartService = {},
-            onClickServiceStatus = {},
+            openNotificationSettings = {},
             onClickRequestReadNotificationsPermission = {},
             onClickRequestPostNotificationPermission = {},
             onClickRequestBtPermission = {},
@@ -349,32 +357,22 @@ fun SettingsScreenPreview() {
 fun SettingsScreenPreviewInRussian() {
     BtReaderMusicTheme {
         SettingsScreen(
-            scope = rememberCoroutineScope(),
-            snackbarHostState = SnackbarHostState(),
             ttsModeSelection = 1,
-            installedMessengers = arrayListOf(
-                MessengerApp("org.whatsapp", "Whatsapp", null),
-                MessengerApp("org.telegram.messenger", "Telegram", null),
-            ),
-            enabledMessengerString = null,
-            installedMusicApps = arrayListOf(
-                MusicApp("ru.yandex.music", null, "Яндекс Музыка", null),
-                MusicApp("com.spotify.music", null, "Spotify", null),
-                MusicApp("com.google.android.apps.youtube.music", null, "Youtube Music", null)
+            addedApps = listOf(
+                InstalledApp("org.whatsapp", "Whatsapp", null),
+                InstalledApp("org.telegram.messenger", "Telegram", null),
             ),
             randomVoice = false,
             btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
-            selectedMusicApp = MusicApp("", null, "", null),
+            onGetInstalledLaunchableApps = { emptyList() },
             onSetTtsMode = {},
-            onCheckedChangeMessengerApp = { _, _ -> },
-            onSelectMusicApp = {},
+            onClickDeleteApp = {},
+            onClickAddApp = {},
             postNotificationPermissionGranted = false,
             readNotificationsPermissionGranted = false,
             onSetRandomVoice = {},
-            onClickStopService = {},
-            onClickStartService = {},
-            onClickServiceStatus = {},
+            openNotificationSettings = {},
             onClickRequestReadNotificationsPermission = {},
             onClickRequestPostNotificationPermission = {},
             onClickRequestBtPermission = {},

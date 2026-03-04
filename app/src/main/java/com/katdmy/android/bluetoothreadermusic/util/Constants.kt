@@ -21,29 +21,24 @@ object Constants {
     val USE_TTS_SF = booleanPreferencesKey("USE_TTS_SF")
 
     /*
-    SERVICE_STARTED - variable disabling service work even on bluetooth connection and usetts=true
-    */
-    val SERVICE_STARTED = booleanPreferencesKey("SERVICE_STARTED")
-
-    /*
-    MUSIC_PACKAGE_NAME - package app name for selected music player
-    */
-    val MUSIC_PACKAGE_NAME = stringPreferencesKey("MUSIC_PACKAGE_NAME")
-
-    /*
     TTS_MODE:
     0 - all apps
-    1 - selected messengers only
+    1 - added apps only
     */
     val TTS_MODE = intPreferencesKey("TTS_MODE")
 
     /*
-    ENABLED_MESSENGERS - string containing package names for chosen messengers
+    VOICE_NOTIFICATION_APPS - string containing package names for apps that should be read with TTS
     */
-    val ENABLED_MESSENGERS = stringPreferencesKey("ENABLED_MESSENGERS")
+    val VOICE_NOTIFICATION_APPS = stringPreferencesKey("VOICE_NOTIFICATION_APPS")
 
     /*
     RANDOM_VOICE - sets if TTS should use random voice instead of default one
     */
     val RANDOM_VOICE = booleanPreferencesKey("RANDOM_VOICE")
+
+    /*
+    SERVICE_LAST_HEARTBEAT - time when service was last alive
+    */
+    val SERVICE_LAST_HEARTBEAT: String = "SERVICE_LAST_HEARTBEAT"
 }

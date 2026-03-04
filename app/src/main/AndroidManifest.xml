@@ -12,16 +12,10 @@
     <uses-permission android:name="android.permission.VIBRATE" />
 
     <queries>
-        <package android:name="ru.yandex.music" />
-        <package android:name="com.spotify.music" />
-        <package android:name="com.google.android.apps.youtube.music" />
-        <package android:name="deezer.android.app" />
-        <package android:name="com.apple.android.music" />
-        <package android:name="com.whatsapp" />
-        <package android:name="org.telegram.messenger" />
-        <package android:name="com.tencent.mm" />
-        <package android:name="com.google.android.apps.messaging" />
-        <package android:name="com.instagram.android" />
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
     </queries>
 
     <application
@@ -52,7 +46,7 @@
         </service>
 
         <service
-            android:name=".services.ListenerStatusService"
+            android:name=".services.StatusService"
             android:exported="false"
             android:foregroundServiceType="specialUse|mediaPlayback"
             android:label="@string/service_name" >

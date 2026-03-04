@@ -1,7 +1,6 @@
 package com.katdmy.android.bluetoothreadermusic.services
 
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothProfile
 import android.content.*
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
@@ -13,15 +12,17 @@ import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 //import android.util.Log
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
-import com.katdmy.android.bluetoothreadermusic.util.Constants.ENABLED_MESSENGERS
 import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
-import com.katdmy.android.bluetoothreadermusic.util.Constants.SERVICE_STARTED
+import com.katdmy.android.bluetoothreadermusic.util.Constants.SERVICE_LAST_HEARTBEAT
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -30,6 +31,10 @@ import kotlinx.coroutines.sync.withLock
 import java.time.LocalDateTime
 import java.time.format.DateTimeFormatter
 import java.util.Locale
+import androidx.core.content.edit
+import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore.getValue
+import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
+import com.katdmy.android.bluetoothreadermusic.util.ServiceHealthBus
 
 
 class NotificationListener : NotificationListenerService() {
@@ -40,9 +45,13 @@ class NotificationListener : NotificationListenerService() {
     private lateinit var audioManager: AudioManager
     private lateinit var focusRequest: AudioFocusRequest
     private var scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private var heartbeatJob: Job? = null
     private val mutex = Mutex()
     private var lastReadNotificationText: String = ""
     private var lastTelegramSortKey: Long = 0L
+    private val prefs by lazy { getSharedPreferences("service_state", MODE_PRIVATE) }
+    private var lastSavedHeartbeat = 0L
 
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -80,7 +89,6 @@ class NotificationListener : NotificationListenerService() {
 
         CoroutineScope(Dispatchers.IO).launch {
             BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener).collectLatest { useTTS ->
-                //createNotification(useTTS == true)
                 switchTTS(useTTS == true)
             }
         }
@@ -88,10 +96,7 @@ class NotificationListener : NotificationListenerService() {
         val notificationsIntentFilter = IntentFilter().apply {
             addAction("com.katdmy.android.bluetoothreadermusic.onNotificationStopTTSClick")
             addAction("com.katdmy.android.bluetoothreadermusic.onNotificationStartTTSClick")
-            addAction("com.katdmy.android.bluetoothreadermusic.stopServiceIntentClick")
-            addAction("com.katdmy.android.bluetoothreadermusic.getStatus")
             addAction("com.katdmy.android.bluetoothreadermusic.abandonAudiofocus")
-            addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED")
         }
         @SuppressLint("UnspecifiedRegisterReceiverFlag")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -99,6 +104,8 @@ class NotificationListener : NotificationListenerService() {
         } else {
             registerReceiver(listeningCommunicator, notificationsIntentFilter)
         }
+
+        startHeartbeat()
     }
 
     override fun onListenerDisconnected() {
@@ -108,6 +115,27 @@ class NotificationListener : NotificationListenerService() {
         // TODO: не выполнять requestRebind в случае, когда сервис закрыт по команде пользователя или при прибитии приложения
         requestRebind(ComponentName(this, NotificationListener::class.java))
         super.onListenerDisconnected()
+    }
+
+    private fun startHeartbeat() {
+        heartbeatJob?.cancel()
+        heartbeatJob = serviceScope.launch {
+            try {
+                while (isActive) {
+                    ServiceHealthBus.emitHeartbeat()
+
+                    val now = System.currentTimeMillis()
+                    if (now - lastSavedHeartbeat > 2 * 60_000) {
+                        prefs.edit {
+                            putLong(SERVICE_LAST_HEARTBEAT, System.currentTimeMillis())
+                        }
+                        lastSavedHeartbeat = now
+                    }
+
+                    delay(20_000)
+                }
+            } catch (_: Throwable) {}
+        }
     }
 
     private fun ttsInitialized() {
@@ -149,8 +177,6 @@ class NotificationListener : NotificationListenerService() {
         if (!newUseTTS) {
             tts.stop()
         }
-
-        //createNotification(newUseTTS)
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
@@ -164,11 +190,10 @@ class NotificationListener : NotificationListenerService() {
 
         if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
         scope.launch {
-            val useTTS = BTRMDataStore.getValue(USE_TTS_SF, this@NotificationListener)
-            val serviceStarted = BTRMDataStore.getValue(SERVICE_STARTED, this@NotificationListener)
+            val useTTS = getValue(USE_TTS_SF, this@NotificationListener)
 
-            if (useTTS == true && serviceStarted == true) {
-                val ttsMode = BTRMDataStore.getValue(TTS_MODE, this@NotificationListener)
+            if (useTTS == true) {
+                val ttsMode = getValue(TTS_MODE, this@NotificationListener)
                 when (ttsMode) {
                     0 -> {
                         if (packageName != applicationContext.packageName) {
@@ -179,11 +204,16 @@ class NotificationListener : NotificationListenerService() {
                     }
 
                     1 -> {
-                        val enabledMessengersList = BTRMDataStore.getValue(ENABLED_MESSENGERS, this@NotificationListener)
+                        val enabledMessengersList = getValue(VOICE_NOTIFICATION_APPS, this@NotificationListener)
                                 ?.getList() ?: listOf()
                         if (packageName in enabledMessengersList) {
+
+                            val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
+                            intent.putExtra("Data", "$title - $text")
+                            sendBroadcast(intent)
+
                             when (packageName) {
-                                "com.whatsapp" -> if (sortKey == "1") readTTS(title, text)
+                                "com.whatsapp" -> if (sortKey?.toInt() == 1) readTTS(title, text)
                                 "com.instagram.android" -> if (key?.contains("|direct|") == true) readTTS(title, text)
                                 "org.telegram.messenger" -> if (sortKey != null && sortKey.toLong() > lastTelegramSortKey) {
                                     readTTS(title, text)
@@ -205,7 +235,7 @@ class NotificationListener : NotificationListenerService() {
         if ("$title - $text" != lastReadNotificationText && (title != null || text != null)) {
             lastReadNotificationText = "$title - $text"
             scope.launch {
-                val randomVoice = BTRMDataStore.getValue(RANDOM_VOICE, this@NotificationListener)
+                val randomVoice = getValue(RANDOM_VOICE, this@NotificationListener)
                 if (randomVoice == true) {
                     if (tts.voices == null) {
                         tts.speak(text, TextToSpeech.QUEUE_ADD, null, "$title - $text")
@@ -249,37 +279,8 @@ class NotificationListener : NotificationListenerService() {
                         BTRMDataStore.saveValue(true, USE_TTS_SF, this@NotificationListener)
                     }
                 }
-                "stopServiceIntentClick" -> {
-                    /* val pm = context.packageManager
-                    pm.setComponentEnabledSetting(
-                        ComponentName(context, NotificationListener::class.java),
-                        PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
-                        PackageManager.DONT_KILL_APP
-                    ) */
-                    if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
-                    scope.launch {
-                        BTRMDataStore.saveValue(false, SERVICE_STARTED, this@NotificationListener)
-                    }
-                    scope.cancel()
-                }
                 "abandonAudiofocus" -> {
                     audioManager.abandonAudioFocusRequest(focusRequest)
-                }
-                "CONNECTION_STATE_CHANGED" -> {
-                    when (intent.extras?.getInt(BluetoothProfile.EXTRA_STATE)) {
-                        BluetoothProfile.STATE_DISCONNECTED -> {
-                            if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
-                            scope.launch {
-                                BTRMDataStore.saveValue(false, USE_TTS_SF, this@NotificationListener)
-                            }
-                        }
-                        BluetoothProfile.STATE_CONNECTED -> {
-                            if (!scope.isActive) scope = CoroutineScope(Dispatchers.IO)
-                            scope.launch {
-                                BTRMDataStore.saveValue(true, USE_TTS_SF, this@NotificationListener)
-                            }
-                        }
-                    }
                 }
             }
         }

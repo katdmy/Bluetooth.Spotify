@@ -1,7 +1,6 @@
 package com.katdmy.android.bluetoothreadermusic.util
 
 import android.content.Context
-import androidx.datastore.core.DataStore
 import androidx.datastore.core.IOException
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
@@ -14,7 +13,7 @@ import kotlinx.coroutines.flow.map
 
 object BTRMDataStore {
 
-    private val Context.dataStore: DataStore<Preferences> by preferencesDataStore(name = "settings")
+    private val Context.dataStore by preferencesDataStore(name = "settings")
 
     internal suspend fun <T> saveValue(
         value: T,

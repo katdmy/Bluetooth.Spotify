@@ -3,8 +3,7 @@ package com.katdmy.android.bluetoothreadermusic.ui.vm
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.katdmy.android.bluetoothreadermusic.data.models.MainUiModel
-import com.katdmy.android.bluetoothreadermusic.data.models.MessengerApp
-import com.katdmy.android.bluetoothreadermusic.data.models.MusicApp
+import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
 import com.katdmy.android.bluetoothreadermusic.data.models.GrantedPermissions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -25,15 +24,9 @@ class MainViewModel : ViewModel() {
         onSetReadingTestText(false)
     }
 
-    fun onSetInstalledMusicApps(newInstalledMusicApps: ArrayList<MusicApp>) {
+    fun onSetInstalledApps(newInstalledApps: List<InstalledApp>) {
         viewModelScope.launch {
-            _uiState.emit(_uiState.value.copy(installedMusicApps = newInstalledMusicApps))
-        }
-    }
-
-    fun onSetInstalledMessengerApps(newInstalledMessengerApps: ArrayList<MessengerApp>) {
-        viewModelScope.launch {
-            _uiState.emit(_uiState.value.copy(installedMessengerApps = newInstalledMessengerApps))
+            _uiState.emit(_uiState.value.copy(addedApps = newInstalledApps))
         }
     }
 
@@ -53,20 +46,6 @@ class MainViewModel : ViewModel() {
     fun onChangeBtStatus(newBtStatus: String) {
         viewModelScope.launch {
             _uiState.emit(_uiState.value.copy(btStatus = newBtStatus))
-        }
-    }
-
-    fun onSelectMusicApp(newMusicApp: MusicApp) {
-        viewModelScope.launch {
-            _uiState.emit(_uiState.value.copy(selectedMusicApp = newMusicApp))
-        }
-    }
-
-    fun onSelectMusicAppByPackageName(newMusicAppPackageName: String?) {
-        viewModelScope.launch {
-            val newMusicApp = _uiState.value.installedMusicApps.find { it.packageName == newMusicAppPackageName }
-            if (newMusicApp != null)
-              _uiState.emit(_uiState.value.copy(selectedMusicApp = newMusicApp))
         }
     }
 

@@ -2,6 +2,7 @@
 <resources>
     <string name="app_name">BT Reader</string>
     <string name="service_name">Получение уведомлений</string>
+    <string name="service_channel_name">Обеспечение жизнеспособности сервиса</string>
 
     <string name="onboarding_welcome_title">Добро пожаловать!</string>
     <string name="onboarding_welcome_description">Это приложение читает вслух уведомления с помощью функции Text-To-Speech.</string>
@@ -28,21 +29,25 @@
     <string name="tts_stop">Остановить чтение</string>
     <string name="low_volume">Увеличьте громкость воспроизведения</string>
 
-    <string name="service_started">СЕРВИС ЗАПУЩЕН</string>
-    <string name="service_stopped">СЕРВИС ОСТАНОВЛЕН</string>
+    <string name="open_settings">Открыть настройки</string>
+    <string name="grant_permission">Предоставить разрешение</string>
+    <string name="service_working">Сервис работает</string>
+    <string name="service_stopped">Сервис остановлен</string>
+    <string name="service_not_responding">Сервис не отвечает</string>
     <string name="settings_header">Настройки</string>
     <string name="main_screen_header">Bluetooth-читалка уведомлений</string>
 
-    <string name="mode_switch_header">Выбор режима уведомлений</string>
+    <string name="mode_switch_header">Выбор уведомлений</string>
     <string name="mode_switch_allapps">Все приложения</string>
-    <string name="mode_switch_messengers">Мессенджеры</string>
-    <string name="messengers_header">Доступные мессенджеры</string>
+    <string name="mode_switch_selected">Только выбранные</string>
+    <string name="selected_header">Доступные приложения</string>
     <string name="music_app_header">Музыка</string>
     <string name="random_voice_header">Читать разными голосами</string>
     <string name="abandon_audiofocus">Сбросить аудиофокус</string>
     <string name="privacy_policy_button">Политика конфиденциальности</string>
 
-    <string name="service_header">Управление сервисом</string>
+    <string name="add_installed_app">Добавить</string>
+    <string name="service_header">Чтение уведомлений</string>
     <string name="service_stop">Стоп</string>
     <string name="service_info">Инфо</string>
     <string name="service_start">Запуск</string>
@@ -52,6 +57,11 @@
     <string name="text_to_speech">Чтение уведомлений</string>
     <string name="music_header">Музыка</string>
     <string name="music_open">Открыть %s</string>
+
+    <string name="app_choose_dialog_header">Выбор приложений</string>
+    <string name="app_choose_dialog_search_hint">Поиск</string>
+    <string name="app_choose_dialog_cancel_btn">Отмена</string>
+    <string name="app_choose_dialog_add_btn">Добавить</string>
 
     <string name="stopTTS">Остановить чтение</string>
     <string name="startTTS">Начать чтение</string>

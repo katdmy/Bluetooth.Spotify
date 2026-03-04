@@ -5,12 +5,12 @@ plugins {
 }
 
 android {
-    compileSdk 35
+    compileSdk 36
 
     defaultConfig {
         applicationId "com.katdmy.android.bluetoothreadermusic"
         minSdkVersion 31
-        targetSdkVersion 35
+        targetSdkVersion 36
         versionCode 9
         versionName "9"
 

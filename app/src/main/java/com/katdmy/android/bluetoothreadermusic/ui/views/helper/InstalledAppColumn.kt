@@ -4,66 +4,57 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 import com.katdmy.android.bluetoothreadermusic.R
-import com.katdmy.android.bluetoothreadermusic.data.models.MessengerApp
-import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getList
+import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
+import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import kotlin.collections.forEach
 
 @Composable
-fun MessengerAppColumn(
-    installedMessengerApps: ArrayList<MessengerApp>,
-    enabledMessengerString: String?,
+fun InstalledAppColumn(
+    installedApps: List<InstalledApp>,
     enabled: Boolean,
-    onCheckedChangeMessengerApp: (String, Boolean) -> Unit,
+    onClickDeleteApp: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier) {
-        Text(
-            text = stringResource(R.string.messengers_header),
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.alpha(if (!enabled) 0.5f else 1f)
-        )
-        Spacer(modifier = Modifier.height(8.dp))
-        Column( // Вертикальный скролл для приложений
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            installedMessengerApps.forEach { messengerApp ->
-                MessengerAppCard(
-                    messengerApp = messengerApp,
-                    enabledMessengerString = enabledMessengerString,
-                    enabled = enabled,
-                    onCheckedChangeMessengerApp = onCheckedChangeMessengerApp
-                )
-            }
+    Column( // Вертикальный скролл для приложений
+        verticalArrangement = Arrangement.spacedBy(8.dp),
+        modifier = modifier.fillMaxWidth()
+            .padding(bottom = 8.dp)
+    ) {
+        installedApps.forEach { messengerApp ->
+            MessengerAppCard(
+                messengerApp = messengerApp,
+                enabled = enabled,
+                onClickDelete = { onClickDeleteApp(messengerApp.packageName) },
+            )
         }
     }
 }
 
 @Composable
 fun MessengerAppCard(
-    messengerApp: MessengerApp,
-    enabledMessengerString: String?,
+    messengerApp: InstalledApp,
     enabled: Boolean,
-    onCheckedChangeMessengerApp: (String, Boolean) -> Unit,
+    onClickDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     Card(
@@ -85,20 +76,39 @@ fun MessengerAppCard(
             Text(
                 text = messengerApp.name,
                 style = MaterialTheme.typography.bodyMedium,
-                textAlign = TextAlign.Center,
+                textAlign = TextAlign.Start,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
                 modifier = Modifier
+                    .weight(1f)
                     .alpha(if (!enabled) 0.5f else 1f)
                     .padding(start = 4.dp)
             )
-            Spacer(modifier = Modifier.weight(1f))
-            Switch(
-                checked = enabledMessengerString?.getList()?.contains(messengerApp.packageName) == true,
-                onCheckedChange = { checked: Boolean ->
-                    onCheckedChangeMessengerApp(messengerApp.packageName, checked)
-                },
+            IconButton(
+                onClick = onClickDelete,
                 enabled = enabled,
-                modifier = Modifier.padding(end = 12.dp)
-            )
+                modifier = Modifier.padding(end = 6.dp)
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_delete),
+                    contentDescription = "Delete"
+                )
+            }
         }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun InstalledAppColumnPreview() {
+    BtReaderMusicTheme {
+        InstalledAppColumn(
+            installedApps = listOf(
+                InstalledApp("org.whatsapp", "Whatsapp", null),
+                InstalledApp("org.telegram.messenger", "Telegram", null),
+            ),
+            enabled = true,
+            onClickDeleteApp = {},
+        )
     }
 }
