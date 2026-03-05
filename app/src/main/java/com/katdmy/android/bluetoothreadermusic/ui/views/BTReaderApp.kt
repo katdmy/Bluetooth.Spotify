@@ -9,11 +9,8 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.statusBars
-import androidx.compose.foundation.layout.systemBars
-import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -63,7 +60,8 @@ fun BTReaderApp(
     onClickRequestReadNotificationsPermission: () -> Unit,
     onClickRequestPostNotificationPermission: () -> Unit,
     onClickRequestBtPermission: () -> Unit,
-    onClickAbandonAudiofocus: () -> Unit
+    onClickAbandonAudiofocus: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
@@ -78,9 +76,8 @@ fun BTReaderApp(
     val randomVoice by BTRMDataStore.getValueFlow(RANDOM_VOICE, context).collectAsState(initial = false)
 
     Scaffold(
-        modifier = Modifier
-            .windowInsetsPadding(WindowInsets.systemBars)
-            .consumeWindowInsets(WindowInsets.statusBars),
+        contentWindowInsets = WindowInsets.safeDrawing,
+        modifier = modifier,
         snackbarHost = {
             SnackbarHost(hostState = snackbarHostState)
         },

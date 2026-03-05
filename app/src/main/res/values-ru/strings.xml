@@ -21,6 +21,8 @@
 
     <string name="no_read_notifications_permission">Отсутствует разрешение на чтение уведомлений</string>
     <string name="no_post_notification_permission">Отсутствует разрешение на показ уведомления</string>
+    <string name="allow_read_notifications_permission">Выберите приложение в списке и нажмите «Предоставить доступ».</string>
+    <string name="restart_read_notifications_permission">Отключите доступ к уведомлениям и сразу включите его снова.\nСистема автоматически перезапустит службу.</string>
     <string name="open_permissions_menu">Открыть меню разрешений</string>
     <string name="enable_permission">Разрешить</string>
 
@@ -41,23 +43,16 @@
     <string name="mode_switch_allapps">Все приложения</string>
     <string name="mode_switch_selected">Только выбранные</string>
     <string name="selected_header">Доступные приложения</string>
-    <string name="music_app_header">Музыка</string>
     <string name="random_voice_header">Читать разными голосами</string>
     <string name="abandon_audiofocus">Сбросить аудиофокус</string>
     <string name="privacy_policy_button">Политика конфиденциальности</string>
 
     <string name="add_installed_app">Добавить</string>
     <string name="service_header">Чтение уведомлений</string>
-    <string name="service_stop">Стоп</string>
-    <string name="service_info">Инфо</string>
-    <string name="service_start">Запуск</string>
     <string name="bt_status">Статус BT</string>
     <string name="log_messages">Сообщения</string>
     <string name="log_messages_clear">Очистить</string>
     <string name="text_to_speech">Чтение уведомлений</string>
-    <string name="music_header">Музыка</string>
-    <string name="music_open">Открыть %s</string>
-
     <string name="app_choose_dialog_header">Выбор приложений</string>
     <string name="app_choose_dialog_search_hint">Поиск</string>
     <string name="app_choose_dialog_cancel_btn">Отмена</string>

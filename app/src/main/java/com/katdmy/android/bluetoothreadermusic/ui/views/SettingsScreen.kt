@@ -104,6 +104,11 @@ fun SettingsScreen(
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(horizontal = 8.dp)
                     )
+                    Text(
+                        text = stringResource(R.string.allow_read_notifications_permission),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(horizontal = 8.dp)
+                    )
                     BtReaderButton(
                         text = stringResource(R.string.open_settings),
                         modifier = Modifier
@@ -134,6 +139,11 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.padding(horizontal = 8.dp)
                             )
+                            Text(
+                                text = stringResource(R.string.restart_read_notifications_permission),
+                                style = MaterialTheme.typography.bodyMedium,
+                                modifier = Modifier.padding(horizontal = 8.dp)
+                            )
                             BtReaderButton(
                                 text = stringResource(R.string.open_settings),
                                 modifier = Modifier
@@ -149,15 +159,6 @@ fun SettingsScreen(
                                 style = MaterialTheme.typography.bodyLarge,
                                 modifier = Modifier.padding(horizontal = 8.dp)
                             )
-                            BtReaderButton(
-                                text = stringResource(R.string.open_settings),
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(top = 8.dp),
-                                onClickAction = openNotificationSettings,
-                                painter = painterResource(R.drawable.ic_settings)
-                            )
-
                         }
                         ServiceStatus.Working -> {
                             Text(
@@ -171,7 +172,7 @@ fun SettingsScreen(
             }
         }
 
-        // Секция переключения уведомлений по приложениям
+        // Секция уведомлений по приложениям
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.elevatedCardElevation(4.dp)
