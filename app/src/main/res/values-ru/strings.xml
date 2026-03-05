@@ -21,7 +21,7 @@
 
     <string name="no_read_notifications_permission">Отсутствует разрешение на чтение уведомлений</string>
     <string name="no_post_notification_permission">Отсутствует разрешение на показ уведомления</string>
-    <string name="allow_read_notifications_permission">Выберите приложение в списке и нажмите «Предоставить доступ».</string>
+    <string name="allow_read_notifications_permission">Выберите приложение в списке и предоставьте ему доступ к уведомлениям.</string>
     <string name="restart_read_notifications_permission">Отключите доступ к уведомлениям и сразу включите его снова.\nСистема автоматически перезапустит службу.</string>
     <string name="open_permissions_menu">Открыть меню разрешений</string>
     <string name="enable_permission">Разрешить</string>

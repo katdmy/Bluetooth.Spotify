@@ -11,6 +11,8 @@ import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.material3.Badge
+import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -35,7 +37,9 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.data.Navigation
+import com.katdmy.android.bluetoothreadermusic.data.ServiceStatus
 import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
+import com.katdmy.android.bluetoothreadermusic.services.StatusService
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.ui.vm.MainViewModel
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
@@ -74,6 +78,13 @@ fun BTReaderApp(
     val useTTS by BTRMDataStore.getValueFlow(USE_TTS_SF, context).collectAsState(initial = false)
     val ttsModeSelection by BTRMDataStore.getValueFlow(TTS_MODE, context).collectAsState(initial = 0)
     val randomVoice by BTRMDataStore.getValueFlow(RANDOM_VOICE, context).collectAsState(initial = false)
+
+    val serviceHealth by StatusService.serviceHealth.collectAsState()
+    var badgeNeeded by remember { mutableStateOf(false) }
+    if (!permissions.value.postNotification || !permissions.value.readNotifications || serviceHealth == ServiceStatus.Dead)
+        badgeNeeded = true
+    else
+        badgeNeeded = false
 
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -123,10 +134,15 @@ fun BTReaderApp(
                 actions = {
                     if (navigation == Navigation.Main)
                         IconButton(onClick = { navigation = Navigation.SettingsScreen } ) {
-                            Icon(
-                                painter = painterResource(R.drawable.ic_settings),
-                                contentDescription = "Open/close settings"
-                            )
+                            BadgedBox(badge = {
+                                    if (badgeNeeded) { Badge() }
+                                }
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_settings),
+                                    contentDescription = "Open/close settings"
+                                )
+                            }
                         }
                 },
                 modifier = Modifier

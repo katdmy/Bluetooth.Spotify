@@ -20,7 +20,7 @@
 
     <string name="no_read_notifications_permission">Missing permission to read notifications</string>
     <string name="no_post_notification_permission">Missing permission to display notifications</string>
-    <string name="allow_read_notifications_permission">Select the app in the list and tap “Allow access.”</string>
+    <string name="allow_read_notifications_permission">Select the app in the list and grant it access to notifications.”</string>
     <string name="restart_read_notifications_permission">Disable notification access and enable it again.\nThe system will restart the service automatically.</string>
     <string name="open_permissions_menu">Open permissions menu</string>
     <string name="enable_permission">Enable</string>
