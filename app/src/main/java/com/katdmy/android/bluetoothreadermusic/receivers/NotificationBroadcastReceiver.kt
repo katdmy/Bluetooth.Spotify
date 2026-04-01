@@ -10,6 +10,7 @@ class NotificationBroadcastReceiver(
 
     override fun onReceive(context: Context?, intent: Intent?) {
         val data = intent?.getStringExtra("Data") ?: ""
-        if (data != "") addLogRecord(data)
+        if (data != "")
+            addLogRecord(data)
     }
 }

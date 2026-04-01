@@ -32,7 +32,7 @@ class MainViewModel : ViewModel() {
 
     fun onAddLogMessage(log: String) {
         viewModelScope.launch {
-            val newLog = uiState.value.logMessages + "\n" + log
+            val newLog = uiState.value.logMessages + "\n\n" + log
             _uiState.emit(_uiState.value.copy(logMessages = newLog))
         }
     }

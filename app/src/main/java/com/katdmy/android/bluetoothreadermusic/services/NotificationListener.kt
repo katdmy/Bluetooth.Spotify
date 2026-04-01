@@ -44,7 +44,6 @@ class NotificationListener : NotificationListenerService() {
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var heartbeatJob: Job? = null
     private var lastReadNotificationText: String = ""
-    private var lastTelegramSortKey: Long = 0L
     private val prefs by lazy { getSharedPreferences("service_state", MODE_PRIVATE) }
     private var lastSavedHeartbeat = 0L
     private val queueCounter = AtomicInteger(0)
@@ -54,7 +53,7 @@ class NotificationListener : NotificationListenerService() {
     @Volatile
     private var ttsReady: Boolean = false
     @Volatile
-    private var useTTSChached: Boolean = true
+    private var useTTSCached: Boolean = true
     @Volatile
     private var ttsModeCached: Int = 0
     @Volatile
@@ -98,8 +97,8 @@ class NotificationListener : NotificationListenerService() {
             launch {
                 BTRMDataStore.getValueFlow(USE_TTS_SF, this@NotificationListener)
                     .collectLatest { useTTS ->
-                        useTTSChached = useTTS == true
-                        switchTTS(useTTSChached)
+                        useTTSCached = useTTS == true
+                        switchTTS(useTTSCached)
                     }
             }
             launch {
@@ -180,6 +179,7 @@ class NotificationListener : NotificationListenerService() {
 
     private fun ttsInitialized() {
         audioManager.abandonAudioFocusRequest(focusRequest)
+        queueCounter.set(0)
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String) {
                 lastTtsStartTime = System.currentTimeMillis()
@@ -212,6 +212,8 @@ class NotificationListener : NotificationListenerService() {
     fun switchTTS(newUseTTS: Boolean) {
         if (!newUseTTS) {
             tts.stop()
+        } else {
+            restartTTS()
         }
     }
 
@@ -220,53 +222,68 @@ class NotificationListener : NotificationListenerService() {
         val packageName = sbn?.packageName
         val sortKey = sbn?.notification?.sortKey
         val key = sbn?.key
-        val title = sbn?.notification?.extras?.getCharSequence("android.title")
-        val text = sbn?.notification?.extras?.getCharSequence("android.text")
+        val notificationTitle = sbn?.notification?.extras?.getCharSequence("android.title")
+        val notificationText = sbn?.notification?.extras?.getCharSequence("android.text")
+        val text = "$notificationTitle. $notificationText"
 
-        if (useTTSChached) {
-            when (ttsModeCached) {
-                0 -> {
-                    if (packageName != applicationContext.packageName) {
-                        readTTS(title, text)
-                    }
+        when (ttsModeCached) {
+            0 -> {
+                if (packageName != applicationContext.packageName) {
+                    val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
+                    intent.putExtra("Data", text)
+                    sendBroadcast(intent)
+
+                    readTTS(text)
                 }
+            }
 
-                1 -> {
-                    if (packageName in enabledAppSetCached) {
+            1 -> {
+                if (packageName in enabledAppSetCached) {
+                    when (packageName) {
+                        "com.whatsapp" -> if (sortKey?.toInt() == 1) {
+                            val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
+                            intent.putExtra("Data", text)
+                            sendBroadcast(intent)
 
-                        val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-                        intent.putExtra("Data", "$title - $text")
-                        sendBroadcast(intent)
+                            readTTS(text)
+                        }
+                        "com.instagram.android" -> if (key?.contains("|direct|") == true) readTTS(text)
+                        "org.telegram.messenger" -> {
+                            val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
+                            intent.putExtra("Data", "$sortKey - $key - $text")
+                            sendBroadcast(intent)
 
-                        when (packageName) {
-                            "com.whatsapp" -> if (sortKey?.toInt() == 1) readTTS(title, text)
-                            "com.instagram.android" -> if (key?.contains("|direct|") == true) readTTS(title, text)
-                            "org.telegram.messenger" -> if (sortKey != null && sortKey.toLong() > lastTelegramSortKey) {
-                                readTTS(title, text)
-                                lastTelegramSortKey = sortKey.toLong()
-                            }
+                            readTTS(text)
+                        }
 
-                            else -> readTTS(title, text)
+                        else -> {
+                            val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
+                            intent.putExtra("Data", text)
+                            sendBroadcast(intent)
+
+                            readTTS(text)
                         }
                     }
                 }
-
-                else -> {}
             }
+
+            else -> {}
         }
     }
 
-    private fun readTTS(title: CharSequence?, text: CharSequence?) {
-        if ("$title - $text" != lastReadNotificationText && (title != null || text != null)) {
-            lastReadNotificationText = "$title - $text"
-            if (randomVoiceCached && tts.voices != null) {
-                val availableVoices = tts.voices.filter {
-                    it.locale.language == Locale.getDefault().language
+    private fun readTTS(text: String?) {
+        if (useTTSCached) {
+            if (text != lastReadNotificationText && text != null) {
+                lastReadNotificationText = text
+                if (randomVoiceCached && tts.voices != null) {
+                    val availableVoices = tts.voices.filter {
+                        it.locale.language == Locale.getDefault().language
+                    }
+                    if (availableVoices.isNotEmpty())
+                        tts.voice = availableVoices.random()
                 }
-                if (availableVoices.isNotEmpty())
-                    tts.voice = availableVoices.random()
+                ttsTrySpeak(text)
             }
-            ttsTrySpeak("$title. $text")
         }
     }
 
@@ -331,7 +348,8 @@ class NotificationListener : NotificationListenerService() {
                     }
                 }
                 "abandonAudiofocus" -> {
-                    audioManager.abandonAudioFocusRequest(focusRequest)
+                    //audioManager.abandonAudioFocusRequest(focusRequest)
+                    restartTTS()
                 }
             }
         }
