@@ -120,7 +120,7 @@ class ComposeActivity : ComponentActivity() {
                             onClickRequestReadNotificationsPermission = ::onRequestReadNotificationsPermission,
                             onClickRequestPostNotificationPermission = ::onRequestShowNotificationPermission,
                             onClickRequestBtPermission = ::onRequestBtPermission,
-                            onClickAbandonAudiofocus = ::onClickAbandonAudiofocus
+                            onClickForceRestartTTS = ::onClickForceRestartTTS
                         )
                     else
                         OnboardingScreen(
@@ -370,8 +370,8 @@ class ComposeActivity : ComponentActivity() {
         }
     }
 
-    private fun onClickAbandonAudiofocus() {
-        val intent = Intent("com.katdmy.android.bluetoothreadermusic.abandonAudiofocus")
+    private fun onClickForceRestartTTS() {
+        val intent = Intent("com.katdmy.android.bluetoothreadermusic.forceRestartTTS")
         sendBroadcast(intent)
     }
 

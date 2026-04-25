@@ -64,7 +64,7 @@ fun BTReaderApp(
     onClickRequestReadNotificationsPermission: () -> Unit,
     onClickRequestPostNotificationPermission: () -> Unit,
     onClickRequestBtPermission: () -> Unit,
-    onClickAbandonAudiofocus: () -> Unit,
+    onClickForceRestartTTS: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
@@ -177,7 +177,7 @@ fun BTReaderApp(
                         onClickRequestReadNotificationsPermission = onClickRequestReadNotificationsPermission,
                         onClickRequestPostNotificationPermission = onClickRequestPostNotificationPermission,
                         onClickRequestBtPermission = onClickRequestBtPermission,
-                        onClickAbandonAudiofocus = onClickAbandonAudiofocus,
+                        onClickForceRestartTTS = onClickForceRestartTTS,
                         onClickPrivacyPolicy = { navigation = Navigation.PrivacyPolicyScreeen }
                     )
                 }

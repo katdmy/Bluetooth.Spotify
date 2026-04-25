@@ -59,7 +59,7 @@ fun SettingsScreen(
     onClickRequestReadNotificationsPermission: () -> Unit,
     onClickRequestPostNotificationPermission: () -> Unit,
     onClickRequestBtPermission: () -> Unit,
-    onClickAbandonAudiofocus: () -> Unit,
+    onClickForceRestartTTS: () -> Unit,
     onClickPrivacyPolicy: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -279,18 +279,18 @@ fun SettingsScreen(
             }
         }
 
-        // Секция кнопки сброса аудиофокуса
+        // Секция кнопки перезапуска TTS
 
         Card(
             modifier = Modifier.fillMaxWidth(),
             elevation = CardDefaults.elevatedCardElevation(4.dp)
         ) {
             BtReaderButton(
-                text = stringResource(R.string.abandon_audiofocus),
+                text = stringResource(R.string.restart_tts),
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                onClickAction = onClickAbandonAudiofocus,
+                onClickAction = onClickForceRestartTTS,
                 painter = painterResource(R.drawable.volume_up) // Добавляем иконку
             )
         }
@@ -347,7 +347,7 @@ fun SettingsScreenPreview() {
             onClickRequestReadNotificationsPermission = {},
             onClickRequestPostNotificationPermission = {},
             onClickRequestBtPermission = {},
-            onClickAbandonAudiofocus = {},
+            onClickForceRestartTTS = {},
             onClickPrivacyPolicy = {}
         )
     }
@@ -377,7 +377,7 @@ fun SettingsScreenPreviewInRussian() {
             onClickRequestReadNotificationsPermission = {},
             onClickRequestPostNotificationPermission = {},
             onClickRequestBtPermission = {},
-            onClickAbandonAudiofocus = {},
+            onClickForceRestartTTS = {},
             onClickPrivacyPolicy = {}
         )
     }

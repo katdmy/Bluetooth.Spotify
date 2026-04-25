@@ -44,7 +44,7 @@
     <string name="mode_switch_selected">Только выбранные</string>
     <string name="selected_header">Доступные приложения</string>
     <string name="random_voice_header">Читать разными голосами</string>
-    <string name="abandon_audiofocus">Сбросить аудиофокус</string>
+    <string name="restart_tts">Перезапустить сервис чтения</string>
     <string name="privacy_policy_button">Политика конфиденциальности</string>
 
     <string name="add_installed_app">Добавить</string>
