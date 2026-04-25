@@ -64,18 +64,10 @@ class NotificationListener : NotificationListenerService() {
 
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-        intent.putExtra("Data", "${getCurrentTime()} - service started")
-        sendBroadcast(intent)
-
         return START_STICKY
     }
 
     override fun onListenerConnected() {
-        val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-        intent.putExtra("Data", "${getCurrentTime()} - listener connected")
-        sendBroadcast(intent)
-
         tts = TextToSpeech(this) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
             if (ttsReady) ttsInitialized()
@@ -124,7 +116,7 @@ class NotificationListener : NotificationListenerService() {
                     val now = System.currentTimeMillis()
 
                     if (queueCounter.get() > 0 && now - lastTtsStartTime > TTS_TIMEOUT) {
-                        restartTTS("tts is speaking > $TTS_TIMEOUT, restarting")
+                        restartTTS()
                     }
 
                     delay(10_000L)
@@ -135,7 +127,7 @@ class NotificationListener : NotificationListenerService() {
         val notificationsIntentFilter = IntentFilter().apply {
             addAction("com.katdmy.android.bluetoothreadermusic.onNotificationStopTTSClick")
             addAction("com.katdmy.android.bluetoothreadermusic.onNotificationStartTTSClick")
-            addAction("com.katdmy.android.bluetoothreadermusic.abandonAudiofocus")
+            addAction("com.katdmy.android.bluetoothreadermusic.forceRestartTTS")
         }
         @SuppressLint("UnspecifiedRegisterReceiverFlag")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
@@ -148,10 +140,6 @@ class NotificationListener : NotificationListenerService() {
     }
 
     override fun onListenerDisconnected() {
-        val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-        intent.putExtra("Data", "${getCurrentTime()} - listener disconnected")
-        sendBroadcast(intent)
-        // TODO: не выполнять requestRebind в случае, когда сервис закрыт по команде пользователя или при прибитии приложения
         requestRebind(ComponentName(this, NotificationListener::class.java))
         super.onListenerDisconnected()
     }
@@ -201,10 +189,6 @@ class NotificationListener : NotificationListenerService() {
     }
 
     override fun onDestroy() {
-        val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-        intent.putExtra("Data", "${getCurrentTime()} - service destroyed")
-        sendBroadcast(intent)
-
         unregisterReceiver(listeningCommunicator)
         super.onDestroy()
     }
@@ -224,67 +208,49 @@ class NotificationListener : NotificationListenerService() {
         val key = sbn?.key
         val notificationTitle = sbn?.notification?.extras?.getCharSequence("android.title")
         val notificationText = sbn?.notification?.extras?.getCharSequence("android.text")
-        val text = "$notificationTitle. $notificationText"
 
-        when (ttsModeCached) {
-            0 -> {
-                if (packageName != applicationContext.packageName) {
-                    val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-                    intent.putExtra("Data", text)
-                    sendBroadcast(intent)
+        if (useTTSCached && notificationTitle != null && notificationText != null) {
+            val textToRead = "$notificationTitle. $notificationText"
+            if (textToRead != lastReadNotificationText) {
+                lastReadNotificationText = textToRead
 
-                    readTTS(text)
-                }
-            }
+                when (ttsModeCached) {
+                    0 -> {
+                        if (packageName != applicationContext.packageName)
+                            readTTS(textToRead)
+                    }
 
-            1 -> {
-                if (packageName in enabledAppSetCached) {
-                    when (packageName) {
-                        "com.whatsapp" -> if (sortKey?.toInt() == 1) {
-                            val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-                            intent.putExtra("Data", text)
-                            sendBroadcast(intent)
+                    1 -> {
+                        if (packageName in enabledAppSetCached) {
+                            when (packageName) {
+                                "com.whatsapp" -> if (sortKey?.toInt() == 1)
+                                    readTTS(textToRead)
 
-                            readTTS(text)
-                        }
-                        "com.instagram.android" -> if (key?.contains("|direct|") == true) readTTS(text)
-                        "org.telegram.messenger" -> {
-                            val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-                            intent.putExtra("Data", "$sortKey - $key - $text")
-                            sendBroadcast(intent)
+                                "com.instagram.android" -> if (key?.contains("|direct|") == true)
+                                    readTTS(textToRead)
 
-                            readTTS(text)
-                        }
+                                "org.telegram.messenger" -> readTTS(textToRead)
 
-                        else -> {
-                            val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-                            intent.putExtra("Data", text)
-                            sendBroadcast(intent)
-
-                            readTTS(text)
+                                else -> readTTS(textToRead)
+                            }
                         }
                     }
+
+                    else -> {}
                 }
             }
-
-            else -> {}
         }
     }
 
-    private fun readTTS(text: String?) {
-        if (useTTSCached) {
-            if (text != lastReadNotificationText && text != null) {
-                lastReadNotificationText = text
-                if (randomVoiceCached && tts.voices != null) {
-                    val availableVoices = tts.voices.filter {
-                        it.locale.language == Locale.getDefault().language
-                    }
-                    if (availableVoices.isNotEmpty())
-                        tts.voice = availableVoices.random()
-                }
-                ttsTrySpeak(text)
+    private fun readTTS(text: String) {
+        if (randomVoiceCached && tts.voices != null) {
+            val availableVoices = tts.voices.filter {
+                it.locale.language == Locale.getDefault().language
             }
+            if (availableVoices.isNotEmpty())
+                tts.voice = availableVoices.random()
         }
+        ttsTrySpeak(text)
     }
 
     private fun ttsTrySpeak(text: String) {
@@ -300,23 +266,23 @@ class NotificationListener : NotificationListenerService() {
         val result = tts.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
 
         if (result == TextToSpeech.ERROR) {
-            restartTTS(text)
+            restartTTS()
 
             tts.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
         }
     }
 
-    private fun restartTTS(log: String = "") {
-        val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-        intent.putExtra("Data", "TTS ERROR: $log")
+    private fun restartTTS() {
         try {
             tts.stop()
             tts.setOnUtteranceProgressListener(null)
             tts.shutdown()
         } catch (e: Exception) {
+            val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
             intent.putExtra("Data", "TTS ERROR: ${e.localizedMessage}")
+            sendBroadcast(intent)
         }
-        sendBroadcast(intent)
+
 
         tts = TextToSpeech(this) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
@@ -347,8 +313,7 @@ class NotificationListener : NotificationListenerService() {
                         BTRMDataStore.saveValue(true, USE_TTS_SF, this@NotificationListener)
                     }
                 }
-                "abandonAudiofocus" -> {
-                    //audioManager.abandonAudioFocusRequest(focusRequest)
+                "forceRestartTTS" -> {
                     restartTTS()
                 }
             }
