@@ -290,12 +290,6 @@ class NotificationListener : NotificationListenerService() {
         }
     }
 
-    private fun getCurrentTime(): String {
-        val current = LocalDateTime.now()
-        val formatter = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
-        return current.format(formatter)
-    }
-
 
     inner class ListeningCommunicator : BroadcastReceiver() {
 
