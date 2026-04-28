@@ -24,29 +24,29 @@ import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
 import com.katdmy.android.bluetoothreadermusic.util.PrefsHelper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import androidx.core.content.edit
 import com.katdmy.android.bluetoothreadermusic.data.models.NotificationUiState
 import com.katdmy.android.bluetoothreadermusic.util.ServiceHealthBus
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 
 class StatusService: Service() {
 
     private val FOREGROUND_NOTIFICATION_ID = 10001
-    private var scope: CoroutineScope = CoroutineScope(Dispatchers.IO)
+    private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private lateinit var prefs: SharedPreferences
     private var lastSavedHeartbeat = 0L
 
-    private val useTtsFlow = BTRMDataStore.getValueFlow(USE_TTS_SF, this).map { it == true }.distinctUntilChanged()
-
+    @Volatile
+    private var useTTSCached: Boolean = true
 
     companion object {
         val serviceHealth = MutableStateFlow(ServiceStatus.Dead)
@@ -55,17 +55,22 @@ class StatusService: Service() {
     override fun onCreate() {
         super.onCreate()
 
+        val useTtsFlow = BTRMDataStore
+            .getValueFlow(USE_TTS_SF, this)
+            .map { it == true }
+            .distinctUntilChanged()
+
         prefs = PrefsHelper.getPrefs(this)
-        scope = CoroutineScope(Dispatchers.IO)
 
         startForegroundOnce()
 
-        scope.launch {
+        serviceScope.launch {
             combine(
                 serviceHealth,
                 useTtsFlow
-            ) { health, useTts ->
-                buildUiState(health, useTts)
+            ) { health, useTTS ->
+                useTTSCached = useTTS == true
+                buildUiState(health)
             }
                 .distinctUntilChanged()
                 .collect { uiState ->
@@ -92,10 +97,14 @@ class StatusService: Service() {
         return START_REDELIVER_INTENT
     }
 
+    override fun onDestroy() {
+        serviceScope.cancel() // ← Важно! Иначе утечка корутин
+        super.onDestroy()
+    }
+
 
     private fun buildUiState(
-        health: ServiceStatus,
-        useTts: Boolean
+        health: ServiceStatus
     ): NotificationUiState {
         return when {
             health == ServiceStatus.Dead -> {
@@ -106,7 +115,7 @@ class StatusService: Service() {
                     label = getString(R.string.restartService)
                 )
             }
-            !useTts -> {
+            !useTTSCached -> {
                 NotificationUiState(
                     title = getText(R.string.notification_title_tts_off),
                     icon = R.drawable.ic_outline_notifications,
@@ -132,7 +141,7 @@ class StatusService: Service() {
     }
 
     private fun startForegroundOnce() {
-        val initialNotification = buildNotification(buildUiState(ServiceStatus.Disabled, false))
+        val initialNotification = buildNotification(buildUiState(ServiceStatus.Disabled))
         ServiceCompat.startForeground(
             this@StatusService,  // service
             FOREGROUND_NOTIFICATION_ID,  // id
@@ -146,7 +155,7 @@ class StatusService: Service() {
     }
 
     private fun startWatchdog() {
-        scope.launch {
+        serviceScope.launch {
             ServiceHealthBus.heartbeatFlow.collect { timestamp ->
                 lastSavedHeartbeat = timestamp
                 serviceHealth.value = ServiceStatus.Working
@@ -155,7 +164,7 @@ class StatusService: Service() {
     }
 
     private fun observeHearbeat() {
-        scope.launch {
+        serviceScope.launch {
             while(isActive) {
                 delay(120_000)
 
@@ -167,13 +176,6 @@ class StatusService: Service() {
                 prefs.edit { putLong(SERVICE_LAST_HEARTBEAT, lastSavedHeartbeat) }
             }
         }
-    }
-
-    override fun onDestroy() {
-        if (scope.isActive) {
-            scope.cancel()
-        }
-        super.onDestroy()
     }
 
     override fun onBind(p0: Intent?): IBinder? {
@@ -274,10 +276,8 @@ class StatusService: Service() {
         if (now - lastDismiss > 5_000) {
             Handler(Looper.getMainLooper()).postDelayed({
                 if (!isNotificationActive()) {
-                    scope.launch {
-                        val notification = buildNotification(buildUiState(serviceHealth.first(), useTtsFlow.first()))
-                        startForeground(FOREGROUND_NOTIFICATION_ID, notification)
-                    }
+                    val notification = buildNotification(buildUiState(serviceHealth.value))
+                    startForeground(FOREGROUND_NOTIFICATION_ID, notification)
                 }
             }, 350)
         } else {
