@@ -65,6 +65,7 @@ fun BTReaderApp(
     onClickRequestPostNotificationPermission: () -> Unit,
     onClickRequestBtPermission: () -> Unit,
     onClickForceRestartTTS: () -> Unit,
+    onClickOpenTTSSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
@@ -81,10 +82,12 @@ fun BTReaderApp(
 
     val serviceHealth by StatusService.serviceHealth.collectAsState()
     var badgeNeeded by remember { mutableStateOf(false) }
-    if (!permissions.value.postNotification || !permissions.value.readNotifications || serviceHealth == ServiceStatus.Dead)
-        badgeNeeded = true
+    if (!permissions.value.postNotification ||
+        !permissions.value.readNotifications ||
+        serviceHealth == ServiceStatus.Dead)
+            badgeNeeded = true
     else
-        badgeNeeded = false
+            badgeNeeded = false
 
     Scaffold(
         contentWindowInsets = WindowInsets.safeDrawing,
@@ -164,6 +167,7 @@ fun BTReaderApp(
                         ttsModeSelection = ttsModeSelection,
                         addedApps = state.value.addedApps,
                         randomVoice = randomVoice,
+                        voicesCount = state.value.voicesCount,
                         postNotificationPermissionGranted = permissions.value.postNotification,
                         readNotificationsPermissionGranted = permissions.value.readNotifications,
                         btStatusPermissionGranted = permissions.value.btStatus,
@@ -173,6 +177,7 @@ fun BTReaderApp(
                         onClickDeleteApp = onClickDeleteApp,
                         onClickAddApp = onAddApps,
                         onSetRandomVoice = onSetRandomVoice,
+                        onClickOpenTTSSettings = onClickOpenTTSSettings,
                         openNotificationSettings = restartNotificationListener,
                         onClickRequestReadNotificationsPermission = onClickRequestReadNotificationsPermission,
                         onClickRequestPostNotificationPermission = onClickRequestPostNotificationPermission,

@@ -44,6 +44,8 @@
     <string name="mode_switch_selected">Только выбранные</string>
     <string name="selected_header">Доступные приложения</string>
     <string name="random_voice_header">Читать разными голосами</string>
+    <string name="lack_available_voices">Для работы функции необходимо не менее двух установленных голосов для вашего языка. Откройте настройки TTS и установите дополнительные языковые пакеты.</string>
+    <string name="open_tts_settings">Настройки TTS</string>
     <string name="restart_tts">Перезапустить сервис чтения</string>
     <string name="privacy_policy_button">Политика конфиденциальности</string>
 

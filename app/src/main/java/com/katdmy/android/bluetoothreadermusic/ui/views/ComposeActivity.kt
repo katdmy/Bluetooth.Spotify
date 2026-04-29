@@ -13,6 +13,7 @@ import android.os.Bundle
 import android.provider.Settings
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.speech.tts.Voice
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -120,7 +121,8 @@ class ComposeActivity : ComponentActivity() {
                             onClickRequestReadNotificationsPermission = ::onRequestReadNotificationsPermission,
                             onClickRequestPostNotificationPermission = ::onRequestShowNotificationPermission,
                             onClickRequestBtPermission = ::onRequestBtPermission,
-                            onClickForceRestartTTS = ::onClickForceRestartTTS
+                            onClickForceRestartTTS = ::onClickForceRestartTTS,
+                            onClickOpenTTSSettings = ::onClickOpenTTSSettings
                         )
                     else
                         OnboardingScreen(
@@ -274,6 +276,12 @@ class ComposeActivity : ComponentActivity() {
                 viewModel.onSetReadingTestText(false)
             }
         })
+
+        val voicesCount = tts.voices?.count {
+            it.locale?.language == Locale.getDefault().language &&
+                    !it.isNetworkConnectionRequired
+        } ?: 0
+        viewModel.onSetVoicesCount(voicesCount)
     }
 
     private fun onClickReadTestText(text: String) {
@@ -282,15 +290,27 @@ class ComposeActivity : ComponentActivity() {
         lifecycleScope.launch {
             val randomVoice = BTRMDataStore.getValue(RANDOM_VOICE, this@ComposeActivity)
             if (randomVoice == true) {
-                if (tts.voices == null) {
-                    tts.speak(text, TextToSpeech.QUEUE_ADD, null, text)
+                val targetLang = Locale.getDefault().language
+                val randomVoice = tts.voices.filter { voice ->
+                    voice.locale?.language == targetLang &&
+                            !voice.isNetworkConnectionRequired &&
+                            voice.quality >= Voice.QUALITY_NORMAL
+                }.randomOrNull()
+
+                if (randomVoice == null) {
+                    tts.language = Locale.getDefault()
                 } else {
-                    tts.voice = tts.voices.filter { it.locale.language == Locale.getDefault().language }.random()
-                    tts.speak(text, TextToSpeech.QUEUE_ADD, null, text)
+                    try {
+                        tts.voice = randomVoice
+                    } catch (_: Exception) {
+                        tts.language = Locale.getDefault()
+                        viewModel.onAddLogMessage("Error changing voice to ${randomVoice.name}, using default voice instead")
+                    }
                 }
-            } else {
-                tts.speak(text, TextToSpeech.QUEUE_ADD, null, text)
             }
+
+            val utteranceId = System.nanoTime().toString()
+            tts.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
         }
     }
 
@@ -373,6 +393,17 @@ class ComposeActivity : ComponentActivity() {
     private fun onClickForceRestartTTS() {
         val intent = Intent("com.katdmy.android.bluetoothreadermusic.forceRestartTTS")
         sendBroadcast(intent)
+
+        try {
+            tts.stop()
+            tts.setOnUtteranceProgressListener(null)
+            tts.shutdown()
+        } catch (_: Exception) {
+        }
+
+        tts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) ttsInitialized()
+        }
     }
 
     private fun getInitialBluetoothStatus(setToModel: (String) -> Unit) {
@@ -397,6 +428,12 @@ class ComposeActivity : ComponentActivity() {
 
     private fun onRequestBtPermission() {
         requestPermissionLauncher.launch(arrayOf(Manifest.permission.BLUETOOTH_CONNECT))
+    }
+
+    private fun onClickOpenTTSSettings() {
+        startActivity(Intent("com.android.settings.TTS_SETTINGS").apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK
+        })
     }
 }
 

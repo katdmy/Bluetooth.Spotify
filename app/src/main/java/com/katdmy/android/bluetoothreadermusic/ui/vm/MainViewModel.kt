@@ -1,14 +1,13 @@
 package com.katdmy.android.bluetoothreadermusic.ui.vm
 
 import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import com.katdmy.android.bluetoothreadermusic.data.models.MainUiModel
 import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
 import com.katdmy.android.bluetoothreadermusic.data.models.GrantedPermissions
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.update
 
 class MainViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(MainUiModel())
@@ -25,51 +24,39 @@ class MainViewModel : ViewModel() {
     }
 
     fun onSetInstalledApps(newInstalledApps: List<InstalledApp>) {
-        viewModelScope.launch {
-            _uiState.emit(_uiState.value.copy(addedApps = newInstalledApps))
-        }
+        _uiState.update { it.copy(addedApps = newInstalledApps) }
     }
 
     fun onAddLogMessage(log: String) {
-        viewModelScope.launch {
-            val newLog = uiState.value.logMessages + "\n\n" + log
-            _uiState.emit(_uiState.value.copy(logMessages = newLog))
-        }
+        val newLog = uiState.value.logMessages + "\n\n" + log
+        _uiState.update { it.copy(logMessages = newLog) }
     }
 
     fun onClearLogMessages() {
-        viewModelScope.launch {
-            _uiState.emit(_uiState.value.copy(logMessages = ""))
-        }
+        _uiState.update { it.copy(logMessages = "") }
     }
 
     fun onChangeBtStatus(newBtStatus: String) {
-        viewModelScope.launch {
-            _uiState.emit(_uiState.value.copy(btStatus = newBtStatus))
-        }
+        _uiState.update { it.copy(btStatus = newBtStatus)}
     }
 
     fun onSetReadNotificationsPermission(newReadNotificationsPermission: Boolean) {
-        viewModelScope.launch {
-            _permissionState.emit(_permissionState.value.copy(readNotifications = newReadNotificationsPermission))
-        }
+        _permissionState.update { it.copy(readNotifications = newReadNotificationsPermission)}
     }
 
     fun onSetReadingTestText(newReadingTestText: Boolean) {
-        viewModelScope.launch {
-            _isReadingTestText.emit(newReadingTestText)
-        }
+        _isReadingTestText.tryEmit(newReadingTestText)
     }
 
     fun onSetPostNotificationPermission(newPostNotificationPermission: Boolean) {
-        viewModelScope.launch {
-            _permissionState.emit(_permissionState.value.copy(postNotification = newPostNotificationPermission))
-        }
+        _permissionState.update { it.copy(postNotification = newPostNotificationPermission) }
     }
 
     fun onSetBTStatusPermission(newBTStatusPermission: Boolean) {
-        viewModelScope.launch {
-            _permissionState.emit(_permissionState.value.copy(btStatus = newBTStatusPermission))
-        }
+        _permissionState.update { it.copy(btStatus = newBTStatusPermission) }
+    }
+
+    fun onSetVoicesCount(newVoicesCount: Int) {
+        _uiState.update { it.copy(voicesCount = newVoicesCount) }
     }
 }

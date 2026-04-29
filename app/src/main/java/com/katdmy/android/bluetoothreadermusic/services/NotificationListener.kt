@@ -10,6 +10,7 @@ import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
+import android.speech.tts.Voice
 //import android.util.Log
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
@@ -25,8 +26,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
-import java.time.LocalDateTime
-import java.time.format.DateTimeFormatter
 import java.util.Locale
 import androidx.core.content.edit
 import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
@@ -36,7 +35,6 @@ import java.util.concurrent.atomic.AtomicInteger
 
 class NotificationListener : NotificationListenerService() {
 
-    //private val TAG = this.javaClass.simpleName
     private lateinit var listeningCommunicator: ListeningCommunicator
     private lateinit var tts: TextToSpeech
     private lateinit var audioManager: AudioManager
@@ -49,6 +47,10 @@ class NotificationListener : NotificationListenerService() {
     private val queueCounter = AtomicInteger(0)
     private var lastTtsStartTime = 0L
     private val TTS_TIMEOUT = 5 * 60 * 1000L    // 5 минут
+
+    @Volatile
+    private var validRandomVoices: List<Voice> = emptyList()
+    private var defaultFallbackVoice: Voice? = null
 
     @Volatile
     private var ttsReady: Boolean = false
@@ -186,6 +188,8 @@ class NotificationListener : NotificationListenerService() {
                 queueCounter.decrementAndGet()
             }
         })
+
+        refreshValidVoices()
     }
 
     override fun onDestroy() {
@@ -200,6 +204,53 @@ class NotificationListener : NotificationListenerService() {
             restartTTS()
         }
     }
+
+    private fun restartTTS() {
+        try {
+            tts.stop()
+            tts.setOnUtteranceProgressListener(null)
+            tts.shutdown()
+        } catch (_: Exception) {
+            /*val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
+            intent.putExtra("Data", "TTS ERROR: ${e.localizedMessage}")
+            sendBroadcast(intent)*/
+        }
+
+        tts = TextToSpeech(this) { status ->
+            ttsReady = status == TextToSpeech.SUCCESS
+            if (ttsReady) ttsInitialized()
+        }
+    }
+
+    private fun refreshValidVoices() {
+        val targetLang = Locale.getDefault().language
+        val allVoices = tts.voices ?: run {
+            //Log.w("TTS", "Движок не вернул список голосов")
+            validRandomVoices = emptyList()
+            defaultFallbackVoice = null
+            return
+        }
+
+        val safeVoices = mutableListOf<Voice>()
+        for (voice in allVoices) {
+            if (voice.locale?.language == targetLang &&
+                !voice.isNetworkConnectionRequired &&
+                voice.quality >= Voice.QUALITY_NORMAL
+            ) {
+                try {
+                    tts.voice = voice
+                    safeVoices.add(voice)
+                } catch (e: Exception) {
+                    //Log.w("TTS", "Голос пропущен (невалидный): ${voice.name}", e)
+                }
+            }
+        }
+        validRandomVoices = safeVoices
+        defaultFallbackVoice = safeVoices.firstOrNull()
+
+        //Log.d("TTS", "Доступно безопасных голосов для смены: ${validRandomVoices.size}")
+    }
+
 
     override fun onNotificationPosted(sbn: StatusBarNotification?) {
 
@@ -243,13 +294,25 @@ class NotificationListener : NotificationListenerService() {
     }
 
     private fun readTTS(text: String) {
-        if (randomVoiceCached && tts.voices != null) {
-            val availableVoices = tts.voices.filter {
-                it.locale.language == Locale.getDefault().language
-            }
-            if (availableVoices.isNotEmpty())
-                tts.voice = availableVoices.random()
+        if (!randomVoiceCached || validRandomVoices.isEmpty()) {
+            ttsTrySpeak(text)
+            return
         }
+
+        val nextVoice = validRandomVoices.random()
+
+        try {
+            tts.voice = nextVoice
+        } catch (e: Exception) {
+            //Log.e("TTS", "Критическая ошибка установки ранее проверенного голоса: ${nextVoice.name}", e)
+            try {
+                defaultFallbackVoice?.let { tts.voice = it }
+                    ?: tts.setLanguage(Locale.getDefault())
+            } catch (fbe: Exception) {
+                //Log.e("TTS", "Fallback тоже не сработал, оставляем системный", fbe)
+            }
+        }
+
         ttsTrySpeak(text)
     }
 
@@ -269,24 +332,6 @@ class NotificationListener : NotificationListenerService() {
             restartTTS()
 
             tts.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
-        }
-    }
-
-    private fun restartTTS() {
-        try {
-            tts.stop()
-            tts.setOnUtteranceProgressListener(null)
-            tts.shutdown()
-        } catch (e: Exception) {
-            val intent = Intent("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-            intent.putExtra("Data", "TTS ERROR: ${e.localizedMessage}")
-            sendBroadcast(intent)
-        }
-
-
-        tts = TextToSpeech(this) { status ->
-            ttsReady = status == TextToSpeech.SUCCESS
-            if (ttsReady) ttsInitialized()
         }
     }
 

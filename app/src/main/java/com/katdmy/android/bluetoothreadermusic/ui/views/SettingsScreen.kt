@@ -46,6 +46,7 @@ fun SettingsScreen(
     ttsModeSelection: Int?,
     addedApps: List<InstalledApp>,
     randomVoice: Boolean?,
+    voicesCount: Int,
     postNotificationPermissionGranted: Boolean,
     readNotificationsPermissionGranted: Boolean,
     btStatusPermissionGranted: Boolean,
@@ -59,6 +60,7 @@ fun SettingsScreen(
     onClickRequestReadNotificationsPermission: () -> Unit,
     onClickRequestPostNotificationPermission: () -> Unit,
     onClickRequestBtPermission: () -> Unit,
+    onClickOpenTTSSettings: () -> Unit,
     onClickForceRestartTTS: () -> Unit,
     onClickPrivacyPolicy: () -> Unit,
     modifier: Modifier = Modifier
@@ -229,22 +231,41 @@ fun SettingsScreen(
             elevation = CardDefaults.elevatedCardElevation(4.dp)
         ) {
             // Секция включения случайного голоса
-            Row(
+            Column(
                 modifier = Modifier
                     .padding(16.dp)
-                    .fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .fillMaxWidth()
             ) {
-                Text(
-                    text = stringResource(R.string.random_voice_header),
-                    style = MaterialTheme.typography.headlineSmall,
-                    fontSize = 22.sp,
-                    modifier = Modifier.padding(end = 12.dp)
-                )
-                Switch(
-                    checked = randomVoice == true,
-                    onCheckedChange = onSetRandomVoice
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.random_voice_header),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontSize = 22.sp,
+                        modifier = Modifier.padding(end = 12.dp)
+                    )
+                    Switch(
+                        checked = randomVoice == true,
+                        onCheckedChange = onSetRandomVoice
+                    )
+                }
+                if (voicesCount <= 1) {
+                    Text(
+                        text = stringResource(R.string.lack_available_voices),
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(end = 12.dp)
+                    )
+                }
+                BtReaderButton(
+                    text = stringResource(R.string.open_tts_settings),
+                    onClickAction = onClickOpenTTSSettings,
+                    painter = painterResource(R.drawable.ic_settings),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 8.dp),
                 )
             }
         }
@@ -334,6 +355,7 @@ fun SettingsScreenPreview() {
                 InstalledApp("org.telegram.messenger", "Telegram", null),
             ),
             randomVoice = false,
+            voicesCount = 1,
             postNotificationPermissionGranted = false,
             readNotificationsPermissionGranted = false,
             btStatusPermissionGranted = true,
@@ -343,6 +365,7 @@ fun SettingsScreenPreview() {
             onClickDeleteApp = {},
             onClickAddApp = {},
             onSetRandomVoice = {},
+            onClickOpenTTSSettings = {},
             openNotificationSettings = {},
             onClickRequestReadNotificationsPermission = {},
             onClickRequestPostNotificationPermission = {},
@@ -364,6 +387,7 @@ fun SettingsScreenPreviewInRussian() {
                 InstalledApp("org.telegram.messenger", "Telegram", null),
             ),
             randomVoice = false,
+            voicesCount = 2,
             btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
             onGetInstalledLaunchableApps = { emptyList() },
@@ -373,6 +397,7 @@ fun SettingsScreenPreviewInRussian() {
             postNotificationPermissionGranted = false,
             readNotificationsPermissionGranted = false,
             onSetRandomVoice = {},
+            onClickOpenTTSSettings = {},
             openNotificationSettings = {},
             onClickRequestReadNotificationsPermission = {},
             onClickRequestPostNotificationPermission = {},
