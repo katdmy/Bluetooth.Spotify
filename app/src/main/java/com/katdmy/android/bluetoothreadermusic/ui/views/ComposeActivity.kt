@@ -58,6 +58,7 @@ class ComposeActivity : ComponentActivity() {
     private lateinit var tts: TextToSpeech
     private lateinit var audioManager: AudioManager
     private lateinit var focusRequest: AudioFocusRequest
+    private var currentVoice: Voice? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -288,23 +289,28 @@ class ComposeActivity : ComponentActivity() {
         if (getCurrentVolumePercent() < 10)
             Toast.makeText(this, getString(R.string.low_volume), Toast.LENGTH_SHORT).show()
         lifecycleScope.launch {
-            val randomVoice = BTRMDataStore.getValue(RANDOM_VOICE, this@ComposeActivity)
-            if (randomVoice == true) {
+            val useRandomVoice = BTRMDataStore.getValue(RANDOM_VOICE, this@ComposeActivity)
+            if (useRandomVoice == true) {
                 val targetLang = Locale.getDefault().language
-                val randomVoice = tts.voices.filter { voice ->
+                val randomVoices = tts.voices.filter { voice ->
                     voice.locale?.language == targetLang &&
                             !voice.isNetworkConnectionRequired &&
                             voice.quality >= Voice.QUALITY_NORMAL
-                }.randomOrNull()
+                }
 
-                if (randomVoice == null) {
+                val nextVoice = randomVoices
+                    .filter { it != currentVoice }
+                    .randomOrNull()
+
+                if (nextVoice == null) {
                     tts.language = Locale.getDefault()
+                    viewModel.onAddLogMessage("Error changing voice, using default voice instead. Try check available voices list on Settings screen")
                 } else {
                     try {
-                        tts.voice = randomVoice
+                        tts.voice = nextVoice
                     } catch (_: Exception) {
                         tts.language = Locale.getDefault()
-                        viewModel.onAddLogMessage("Error changing voice to ${randomVoice.name}, using default voice instead")
+                        viewModel.onAddLogMessage("Error changing voice to ${nextVoice.name}, using default voice instead")
                     }
                 }
             }

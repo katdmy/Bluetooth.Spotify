@@ -1,11 +1,13 @@
 package com.katdmy.android.bluetoothreadermusic.services
 
 import android.annotation.SuppressLint
+import android.app.Notification
 import android.content.*
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
 import android.media.AudioManager
 import android.os.Build
+import android.os.Bundle
 import android.service.notification.NotificationListenerService
 import android.service.notification.StatusBarNotification
 import android.speech.tts.TextToSpeech
@@ -28,6 +30,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Locale
 import androidx.core.content.edit
+import com.katdmy.android.bluetoothreadermusic.data.models.NotificationFingerprint
 import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
 import com.katdmy.android.bluetoothreadermusic.util.ServiceHealthBus
 import java.util.concurrent.atomic.AtomicInteger
@@ -41,7 +44,7 @@ class NotificationListener : NotificationListenerService() {
     private lateinit var focusRequest: AudioFocusRequest
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var heartbeatJob: Job? = null
-    private var lastReadNotificationText: String = ""
+    private var recent = LinkedHashSet<NotificationFingerprint>()
     private val prefs by lazy { getSharedPreferences("service_state", MODE_PRIVATE) }
     private var lastSavedHeartbeat = 0L
     private val queueCounter = AtomicInteger(0)
@@ -50,6 +53,8 @@ class NotificationListener : NotificationListenerService() {
 
     @Volatile
     private var validRandomVoices: List<Voice> = emptyList()
+    @Volatile
+    private var currentVoice: Voice? = null
     private var defaultFallbackVoice: Voice? = null
 
     @Volatile
@@ -252,18 +257,51 @@ class NotificationListener : NotificationListenerService() {
     }
 
 
-    override fun onNotificationPosted(sbn: StatusBarNotification?) {
+    override fun onNotificationPosted(sbn: StatusBarNotification) {
 
-        val packageName = sbn?.packageName
-        val sortKey = sbn?.notification?.sortKey
-        val key = sbn?.key
-        val notificationTitle = sbn?.notification?.extras?.getCharSequence("android.title")
-        val notificationText = sbn?.notification?.extras?.getCharSequence("android.text")
+        val packageName = sbn.packageName
+        val sortKey = sbn.notification?.sortKey
+        val key = sbn.key
+        val extras = sbn.notification?.extras
+        val aTitle = extras?.getCharSequence("android.title")
+        val aText = extras?.getCharSequence("android.text")
 
-        if (useTTSCached && notificationTitle != null && notificationText != null) {
-            val textToRead = "$notificationTitle. $notificationText"
-            if (textToRead != lastReadNotificationText) {
-                lastReadNotificationText = textToRead
+        val bundles = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            extras?.getParcelableArray(
+                "android.messages",
+                Bundle::class.java
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            extras?.getParcelableArray("android.messages")
+        }
+        var pSender = ""
+        var pText = ""
+
+        if (bundles != null) {
+            val msg = Notification.MessagingStyle.Message
+                .getMessagesFromBundleArray(bundles).last()
+
+            pText = msg.text.toString()
+            pSender = (
+                    msg.senderPerson?.name
+                        ?: msg.sender
+                        ?: pSender
+                    ).toString()
+        }
+
+        val title = pSender.ifBlank { aTitle }
+        val text = pText.ifBlank { aText }
+
+        if (useTTSCached && title?.isNotBlank() == true && text?.isNotBlank() == true && key != null) {
+
+            val textToRead = "$title. $text"
+            val fingerprint = NotificationFingerprint(key, textToRead)
+            if (!recent.contains(fingerprint)) {
+                recent.add(fingerprint)
+                if (recent.size > 50) {
+                    recent.remove(recent.first())
+                }
 
                 when (ttsModeCached) {
                     0 -> {
@@ -277,7 +315,7 @@ class NotificationListener : NotificationListenerService() {
                                 "com.whatsapp" -> if (sortKey?.toInt() == 1)
                                     readTTS(textToRead)
 
-                                "com.instagram.android" -> if (key?.contains("|direct|") == true)
+                                "com.instagram.android" -> if (key.contains("|direct|"))
                                     readTTS(textToRead)
 
                                 "org.telegram.messenger" -> readTTS(textToRead)
@@ -299,17 +337,19 @@ class NotificationListener : NotificationListenerService() {
             return
         }
 
-        val nextVoice = validRandomVoices.random()
+        val nextVoice = validRandomVoices
+            .filter { it != currentVoice }
+            .randomOrNull() ?: currentVoice
 
         try {
             tts.voice = nextVoice
         } catch (e: Exception) {
-            //Log.e("TTS", "Критическая ошибка установки ранее проверенного голоса: ${nextVoice.name}", e)
+            //Log.e("TTS", "Error setting previously checked valid voice: ${nextVoice.name}", e)
             try {
                 defaultFallbackVoice?.let { tts.voice = it }
                     ?: tts.setLanguage(Locale.getDefault())
             } catch (fbe: Exception) {
-                //Log.e("TTS", "Fallback тоже не сработал, оставляем системный", fbe)
+                //Log.e("TTS", "Fallback didn't work, using system default", fbe)
             }
         }
 
