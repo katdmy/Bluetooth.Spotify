@@ -69,11 +69,6 @@ class ComposeActivity : ComponentActivity() {
             addLogRecord = viewModel::onAddLogMessage
         )
         btBroadcastReceiver = BtBroadcastReceiver(
-            changeUseTTS = { useTTS: Boolean ->
-                lifecycleScope.launch {
-                    BTRMDataStore.saveValue(useTTS, USE_TTS_SF, this@ComposeActivity)
-                }
-            },
             changeConnectionStatus = viewModel::onChangeBtStatus
         )
 
