@@ -296,7 +296,7 @@ class ComposeActivity : ComponentActivity() {
                         tts.voice = nextVoice
                     } catch (_: Exception) {
                         tts.language = Locale.getDefault()
-                        DebugLog.add(this@ComposeActivity, "Error setting voice: ${nextVoice?.name}")
+                        DebugLog.add(this@ComposeActivity, "Error setting voice: ${nextVoice.name}")
                     }
                 }
             }
