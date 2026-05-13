@@ -32,12 +32,12 @@ import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
 import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
 import com.katdmy.android.bluetoothreadermusic.receivers.BtBroadcastReceiver
-import com.katdmy.android.bluetoothreadermusic.receivers.NotificationBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.services.StatusService
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.ui.vm.MainViewModel
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.BluetoothConnectionChecker
+import com.katdmy.android.bluetoothreadermusic.util.Constants.LOG_ENABLED
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getList
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getString
 import com.katdmy.android.bluetoothreadermusic.util.Constants.ONBOARDING_COMPLETE
@@ -47,12 +47,12 @@ import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
 import kotlinx.coroutines.launch
 import java.util.Locale
 import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
+import com.katdmy.android.bluetoothreadermusic.util.DebugLog
 import kotlinx.coroutines.flow.map
 
 class ComposeActivity : ComponentActivity() {
 
     private val viewModel by viewModels<MainViewModel>()
-    private lateinit var notificationBroadcastReceiver: NotificationBroadcastReceiver
     private lateinit var btBroadcastReceiver: BtBroadcastReceiver
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
 
@@ -66,11 +66,10 @@ class ComposeActivity : ComponentActivity() {
 
         enableEdgeToEdge()
 
-        notificationBroadcastReceiver = NotificationBroadcastReceiver(
-            addLogRecord = viewModel::onAddLogMessage
-        )
         btBroadcastReceiver = BtBroadcastReceiver(
-            changeConnectionStatus = viewModel::onChangeBtStatus
+            changeConnectionStatus = {
+                viewModel::onChangeBtStatus
+            }
         )
 
         initTTS()
@@ -120,7 +119,8 @@ class ComposeActivity : ComponentActivity() {
                             onClickRequestPostNotificationPermission = ::onRequestShowNotificationPermission,
                             onClickRequestBtPermission = ::onRequestBtPermission,
                             onClickForceRestartTTS = ::onClickForceRestartTTS,
-                            onClickOpenTTSSettings = ::onClickOpenTTSSettings
+                            onClickOpenTTSSettings = ::onClickOpenTTSSettings,
+                            onChangeUseLogs = ::onChangeUseLogs
                         )
                     else
                         OnboardingScreen(
@@ -179,7 +179,6 @@ class ComposeActivity : ComponentActivity() {
 
     override fun onDestroy() {
         super.onDestroy()
-        unregisterReceiver(notificationBroadcastReceiver)
         unregisterReceiver(btBroadcastReceiver)
     }
 
@@ -198,16 +197,6 @@ class ComposeActivity : ComponentActivity() {
 
     @SuppressLint("UnspecifiedRegisterReceiverFlag")
     private fun registerReceivers() {
-        val notificationsIntentFilter = IntentFilter().apply {
-            addAction("com.katdmy.android.bluetoothreadermusic.onNotificationPosted")
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter,
-                RECEIVER_EXPORTED)
-        } else {
-            registerReceiver(notificationBroadcastReceiver, notificationsIntentFilter)
-        }
-
         val btStatusIntentFilter = IntentFilter().apply {
             addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED")
         }
@@ -301,13 +290,13 @@ class ComposeActivity : ComponentActivity() {
 
                 if (nextVoice == null) {
                     tts.language = Locale.getDefault()
-                    viewModel.onAddLogMessage("Error changing voice, using default voice instead. Try check available voices list on Settings screen")
+                    DebugLog.add(this@ComposeActivity, "Error changing voice, using default voice instead. Try check available voices list on Settings screen")
                 } else {
                     try {
                         tts.voice = nextVoice
                     } catch (_: Exception) {
                         tts.language = Locale.getDefault()
-                        viewModel.onAddLogMessage("Error changing voice to ${nextVoice.name}, using default voice instead")
+                        DebugLog.add(this@ComposeActivity, "Error setting voice: ${nextVoice?.name}")
                     }
                 }
             }
@@ -394,6 +383,11 @@ class ComposeActivity : ComponentActivity() {
     private fun onSetRandomVoice(newRandomVoice: Boolean) {
         lifecycleScope.launch {
             BTRMDataStore.saveValue(newRandomVoice, RANDOM_VOICE, this@ComposeActivity)
+            if (newRandomVoice) {
+                DebugLog.add(this@ComposeActivity, "Random voice enabled")
+            } else {
+                DebugLog.add(this@ComposeActivity, "Random voice disabled")
+            }
         }
     }
 
@@ -447,6 +441,12 @@ class ComposeActivity : ComponentActivity() {
         startActivity(Intent("com.android.settings.TTS_SETTINGS").apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         })
+    }
+
+    private fun onChangeUseLogs(newUseLogs: Boolean) {
+        lifecycleScope.launch {
+            BTRMDataStore.saveValue(newUseLogs, LOG_ENABLED, this@ComposeActivity)
+        }
     }
 }
 

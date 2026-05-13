@@ -46,6 +46,7 @@
     <string name="lack_available_voices">This feature requires at least two voices installed for your language. Open TTS settings and install additional language packs.</string>
     <string name="tts_volume">Speech Volume</string>
     <string name="open_tts_settings">TTS Settings</string>
+    <string name="use_logs">Use logs</string>
     <string name="restart_tts">Restart Text-To-Speech</string>
     <string name="privacy_policy_button">Privacy Policy</string>
 

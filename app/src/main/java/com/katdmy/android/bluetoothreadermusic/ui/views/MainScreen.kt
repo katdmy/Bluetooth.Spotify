@@ -9,8 +9,8 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -32,7 +32,7 @@ import com.katdmy.android.bluetoothreadermusic.ui.views.helper.BtReaderButton
 fun MainScreen(
     testTextToSpeech: String,
     onTestTextToSpeechChange: (String) -> Unit,
-    logMessages: String,
+    logMessages: List<String>,
     useTTS: Boolean,
     isReadingTestText: Boolean,
     onClickReadTestText: (String) -> Unit,
@@ -103,13 +103,14 @@ fun MainScreen(
                     style = MaterialTheme.typography.headlineSmall
                 )
                 Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = logMessages,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier
-                        .weight(1f)
-                        .verticalScroll(rememberScrollState())
-                )
+                LazyColumn(modifier = Modifier.weight(1f)) {
+                    items(logMessages) { message ->
+                        Text(
+                            text = message,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                }
                 // Кнопка очистки логов
                 BtReaderButton(
                     text = stringResource(R.string.log_messages_clear),
@@ -159,7 +160,7 @@ fun MainScreenPreview() {
             onChangeUseTTS = {},
             testTextToSpeech = "",
             onTestTextToSpeechChange = {},
-            logMessages = "",
+            logMessages = emptyList(),
             useTTS = false,
             isReadingTestText = false,
             onClearLog = {}
@@ -177,7 +178,7 @@ fun MainScreenPreviewInRussian() {
             onChangeUseTTS = {},
             testTextToSpeech = "",
             onTestTextToSpeechChange = {},
-            logMessages = "",
+            logMessages = emptyList(),
             useTTS = false,
             isReadingTestText = false,
             onClearLog = {}

@@ -54,6 +54,7 @@ fun SettingsScreen(
     readNotificationsPermissionGranted: Boolean,
     btStatusPermissionGranted: Boolean,
     btStatus: String,
+    useLogs: Boolean?,
     onGetInstalledLaunchableApps: () -> List<InstalledApp>,
     onSetTtsMode: (Int) -> Unit,
     onClickDeleteApp: (String) -> Unit,
@@ -65,6 +66,7 @@ fun SettingsScreen(
     onClickRequestPostNotificationPermission: () -> Unit,
     onClickRequestBtPermission: () -> Unit,
     onClickOpenTTSSettings: () -> Unit,
+    onChangeUseLogs: (Boolean) -> Unit,
     onClickForceRestartTTS: () -> Unit,
     onClickPrivacyPolicy: () -> Unit,
     modifier: Modifier = Modifier
@@ -339,6 +341,35 @@ fun SettingsScreen(
             }
         }
 
+        // Секция включения записи логов
+
+        Card(
+            elevation = CardDefaults.elevatedCardElevation(4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(
+                        text = stringResource(R.string.use_logs),
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontSize = 22.sp,
+                        modifier = Modifier.padding(end = 12.dp)
+                    )
+                    Switch(
+                        checked = useLogs == true,
+                        onCheckedChange = onChangeUseLogs
+                    )
+                }
+            }
+        }
+
         // Секция кнопки перезапуска TTS
 
         Card(
@@ -401,6 +432,7 @@ fun SettingsScreenPreview() {
             readNotificationsPermissionGranted = false,
             btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
+            useLogs = false,
             onGetInstalledLaunchableApps = { emptyList() },
             onSetTtsMode = {},
             onClickDeleteApp = {},
@@ -413,6 +445,7 @@ fun SettingsScreenPreview() {
             onClickRequestPostNotificationPermission = {},
             onClickRequestBtPermission = {},
             onClickForceRestartTTS = {},
+            onChangeUseLogs = {},
             onClickPrivacyPolicy = {}
         )
     }
@@ -434,6 +467,7 @@ fun SettingsScreenPreviewInRussian() {
             voicesCount = 2,
             btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
+            useLogs = false,
             onGetInstalledLaunchableApps = { emptyList() },
             onSetTtsMode = {},
             onClickDeleteApp = {},
@@ -448,6 +482,7 @@ fun SettingsScreenPreviewInRussian() {
             onClickRequestPostNotificationPermission = {},
             onClickRequestBtPermission = {},
             onClickForceRestartTTS = {},
+            onChangeUseLogs = {},
             onClickPrivacyPolicy = {}
         )
     }

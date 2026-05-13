@@ -47,4 +47,9 @@ object Constants {
     TTS_VOLUME - volume for tts engine
     */
     val TTS_VOLUME = floatPreferencesKey("TTS_VOLUME")
+
+    /*
+    LOG_ENABLED - switch to use logging system or no
+    */
+    val LOG_ENABLED = booleanPreferencesKey("LOG_ENABLED")
 }

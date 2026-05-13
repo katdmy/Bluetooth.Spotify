@@ -47,13 +47,14 @@
     <string name="lack_available_voices">Для работы функции необходимо не менее двух установленных голосов для вашего языка. Откройте настройки TTS и установите дополнительные языковые пакеты.</string>
     <string name="tts_volume">Громкость чтения</string>
     <string name="open_tts_settings">Настройки TTS</string>
+    <string name="use_logs">Запись событий</string>
     <string name="restart_tts">Перезапустить сервис чтения</string>
     <string name="privacy_policy_button">Политика конфиденциальности</string>
 
     <string name="add_installed_app">Добавить</string>
     <string name="service_header">Чтение уведомлений</string>
     <string name="bt_status">Статус BT</string>
-    <string name="log_messages">Сообщения</string>
+    <string name="log_messages">Служебные сообщения</string>
     <string name="log_messages_clear">Очистить</string>
     <string name="text_to_speech">Чтение уведомлений</string>
     <string name="app_choose_dialog_header">Выбор приложений</string>

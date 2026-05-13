@@ -27,15 +27,6 @@ class MainViewModel : ViewModel() {
         _uiState.update { it.copy(addedApps = newInstalledApps) }
     }
 
-    fun onAddLogMessage(log: String) {
-        val newLog = uiState.value.logMessages + "\n\n" + log
-        _uiState.update { it.copy(logMessages = newLog) }
-    }
-
-    fun onClearLogMessages() {
-        _uiState.update { it.copy(logMessages = "") }
-    }
-
     fun onChangeBtStatus(newBtStatus: String) {
         _uiState.update { it.copy(btStatus = newBtStatus)}
     }

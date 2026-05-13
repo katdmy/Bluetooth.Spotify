@@ -7,6 +7,7 @@ import android.content.Intent
 import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
+import com.katdmy.android.bluetoothreadermusic.util.DebugLog
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -19,11 +20,13 @@ class BtBroadcastReceiver(
         val status = when (intent?.extras?.getInt(BluetoothProfile.EXTRA_STATE)) {
             BluetoothProfile.STATE_DISCONNECTED -> {
                 changeUseTTS(context, false)
+                DebugLog.add(context, "Bluetooth disconnected")
                 context.getString(R.string.bt_disconnected)
             }
             BluetoothProfile.STATE_CONNECTING -> context.getString(R.string.bt_connecting)
             BluetoothProfile.STATE_CONNECTED -> {
                 changeUseTTS(context, true)
+                DebugLog.add(context, "Bluetooth connected")
                 context.getString(R.string.bt_connected)
             }
             BluetoothProfile.STATE_DISCONNECTING -> context.getString(R.string.bt_disconnecting)
