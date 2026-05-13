@@ -31,6 +31,7 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import androidx.core.content.edit
 import com.katdmy.android.bluetoothreadermusic.data.models.NotificationFingerprint
+import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
 import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
 import com.katdmy.android.bluetoothreadermusic.util.ServiceHealthBus
 import java.util.concurrent.atomic.AtomicInteger
@@ -67,6 +68,8 @@ class NotificationListener : NotificationListenerService() {
     private var randomVoiceCached: Boolean = false
     @Volatile
     private var enabledAppSetCached: Set<String> = setOf()
+    @Volatile
+    private var volumeCached: Float = 1f
 
 
 
@@ -82,9 +85,9 @@ class NotificationListener : NotificationListenerService() {
 
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         focusRequest =
-            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT).run {
+            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).run {
                 setAudioAttributes(AudioAttributes.Builder().run {
-                    setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
+                    setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
                     setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
                     build()
                 })
@@ -116,6 +119,12 @@ class NotificationListener : NotificationListenerService() {
                 BTRMDataStore.getValueFlow(VOICE_NOTIFICATION_APPS, this@NotificationListener)
                     .collectLatest { enabledAppsList ->
                         enabledAppSetCached = enabledAppsList?.getList()?.toSet() ?: setOf()
+                    }
+            }
+            launch {
+                BTRMDataStore.getValueFlow(TTS_VOLUME, this@NotificationListener)
+                    .collectLatest { volume ->
+                        volumeCached = volume ?: 1f
                     }
             }
             launch {
@@ -178,7 +187,9 @@ class NotificationListener : NotificationListenerService() {
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String) {
                 lastTtsStartTime = System.currentTimeMillis()
-                audioManager.requestAudioFocus(focusRequest)
+                // TTS engine может начать buffering/output чуть раньше, чем в onStart.
+                // Перенесено в ttsTrySpeak()
+                //audioManager.requestAudioFocus(focusRequest)
             }
 
             override fun onDone(utteranceId: String) {
@@ -365,13 +376,19 @@ class NotificationListener : NotificationListenerService() {
             tts.stop()
             queueCounter.set(0)
         }
+
+        audioManager.requestAudioFocus(focusRequest)
+
+        val params = Bundle().apply {
+            putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volumeCached*volumeCached)
+        }
         val utteranceId = System.nanoTime().toString()
-        val result = tts.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
+        val result = tts.speak(text, TextToSpeech.QUEUE_ADD, params, utteranceId)
 
         if (result == TextToSpeech.ERROR) {
             restartTTS()
 
-            tts.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
+            tts.speak(text, TextToSpeech.QUEUE_ADD, params, utteranceId)
         }
     }
 

@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
@@ -16,10 +17,10 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -28,13 +29,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.data.ServiceStatus
 import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
-import com.katdmy.android.bluetoothreadermusic.services.StatusService
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.AppChooseDialog
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.BtReaderButton
@@ -43,9 +44,11 @@ import com.katdmy.android.bluetoothreadermusic.ui.views.helper.ServiceHealthIndi
 
 @Composable
 fun SettingsScreen(
+    serviceHealth: ServiceStatus,
     ttsModeSelection: Int?,
     addedApps: List<InstalledApp>,
     randomVoice: Boolean?,
+    ttsVolume: Float?,
     voicesCount: Int,
     postNotificationPermissionGranted: Boolean,
     readNotificationsPermissionGranted: Boolean,
@@ -56,6 +59,7 @@ fun SettingsScreen(
     onClickDeleteApp: (String) -> Unit,
     onClickAddApp: (List<String>) -> Unit,
     onSetRandomVoice: (Boolean) -> Unit,
+    onSetTtsVolume: (Float) -> Unit,
     openNotificationSettings: () -> Unit,
     onClickRequestReadNotificationsPermission: () -> Unit,
     onClickRequestPostNotificationPermission: () -> Unit,
@@ -65,7 +69,6 @@ fun SettingsScreen(
     onClickPrivacyPolicy: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val serviceHealth by StatusService.serviceHealth.collectAsState()
     val options = listOf(
         stringResource(R.string.mode_switch_allapps),
         stringResource(R.string.mode_switch_selected)
@@ -259,6 +262,7 @@ fun SettingsScreen(
                         modifier = Modifier.padding(end = 12.dp)
                     )
                 }
+
                 BtReaderButton(
                     text = stringResource(R.string.open_tts_settings),
                     onClickAction = onClickOpenTTSSettings,
@@ -267,6 +271,41 @@ fun SettingsScreen(
                         .fillMaxWidth()
                         .padding(top = 8.dp),
                 )
+            }
+        }
+
+        // Секция для регулятора громкости TTS
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.elevatedCardElevation(4.dp)
+        ) {
+            Column(modifier = Modifier.padding(16.dp)) {
+                Text(
+                    text = stringResource(R.string.tts_volume),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(top = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Slider(
+                        value = ttsVolume ?: 1f,
+                        onValueChange = onSetTtsVolume,
+                        valueRange = 0.01f..1f,
+                        steps = 19,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Text(
+                        text = "%3d%%".format(((ttsVolume ?: 1f) * 100).toInt()),
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.End,
+                        modifier = Modifier.width(48.dp)
+                    )
+                }
             }
         }
 
@@ -349,12 +388,14 @@ fun SettingsScreen(
 fun SettingsScreenPreview() {
     BtReaderMusicTheme {
         SettingsScreen(
+            serviceHealth = ServiceStatus.Disabled,
             ttsModeSelection = 1,
             addedApps = listOf(
                 InstalledApp("org.whatsapp", "Whatsapp", null),
                 InstalledApp("org.telegram.messenger", "Telegram", null),
             ),
             randomVoice = false,
+            ttsVolume = 0.8f,
             voicesCount = 1,
             postNotificationPermissionGranted = false,
             readNotificationsPermissionGranted = false,
@@ -365,6 +406,7 @@ fun SettingsScreenPreview() {
             onClickDeleteApp = {},
             onClickAddApp = {},
             onSetRandomVoice = {},
+            onSetTtsVolume = {},
             onClickOpenTTSSettings = {},
             openNotificationSettings = {},
             onClickRequestReadNotificationsPermission = {},
@@ -381,12 +423,14 @@ fun SettingsScreenPreview() {
 fun SettingsScreenPreviewInRussian() {
     BtReaderMusicTheme {
         SettingsScreen(
+            serviceHealth = ServiceStatus.Disabled,
             ttsModeSelection = 1,
             addedApps = listOf(
                 InstalledApp("org.whatsapp", "Whatsapp", null),
                 InstalledApp("org.telegram.messenger", "Telegram", null),
             ),
             randomVoice = false,
+            ttsVolume = 0.8f,
             voicesCount = 2,
             btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
@@ -397,6 +441,7 @@ fun SettingsScreenPreviewInRussian() {
             postNotificationPermissionGranted = false,
             readNotificationsPermissionGranted = false,
             onSetRandomVoice = {},
+            onSetTtsVolume = {},
             onClickOpenTTSSettings = {},
             openNotificationSettings = {},
             onClickRequestReadNotificationsPermission = {},

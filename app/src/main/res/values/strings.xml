@@ -44,6 +44,7 @@
     <string name="selected_header">Available apps</string>
     <string name="random_voice_header">Use Different Voices</string>
     <string name="lack_available_voices">This feature requires at least two voices installed for your language. Open TTS settings and install additional language packs.</string>
+    <string name="tts_volume">Speech Volume</string>
     <string name="open_tts_settings">TTS Settings</string>
     <string name="restart_tts">Restart Text-To-Speech</string>
     <string name="privacy_policy_button">Privacy Policy</string>

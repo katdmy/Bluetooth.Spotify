@@ -1,10 +1,12 @@
 package com.katdmy.android.bluetoothreadermusic.util
 
+import android.Manifest
 import android.bluetooth.BluetoothAdapter
 import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothManager
 import android.bluetooth.BluetoothProfile
 import android.content.Context
+import android.content.pm.PackageManager
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,10 +45,13 @@ class BluetoothConnectionChecker(
     }
 
     private fun checkA2DPConnection() : String {
-        val connectedDevices: List<BluetoothDevice>? = a2dpProfile?.connectedDevices
-        if (!connectedDevices.isNullOrEmpty()) {
-            changeUseTTS(context, true)
-            return "CONNECTED"
+        if (context.checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT) ==
+                PackageManager.PERMISSION_GRANTED) {
+            val connectedDevices: List<BluetoothDevice>? = a2dpProfile?.connectedDevices
+            if (!connectedDevices.isNullOrEmpty()) {
+                changeUseTTS(context, true)
+                return "CONNECTED"
+            }
         }
         changeUseTTS(context, false)
         return "DISCONNECTED"

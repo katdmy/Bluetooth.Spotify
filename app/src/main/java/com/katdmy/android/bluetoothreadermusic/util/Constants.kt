@@ -1,6 +1,7 @@
 package com.katdmy.android.bluetoothreadermusic.util
 
 import androidx.datastore.preferences.core.booleanPreferencesKey
+import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 
@@ -41,4 +42,9 @@ object Constants {
     SERVICE_LAST_HEARTBEAT - time when service was last alive
     */
     val SERVICE_LAST_HEARTBEAT: String = "SERVICE_LAST_HEARTBEAT"
+
+    /*
+    TTS_VOLUME - volume for tts engine
+    */
+    val TTS_VOLUME = floatPreferencesKey("TTS_VOLUME")
 }

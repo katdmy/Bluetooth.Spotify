@@ -45,6 +45,7 @@ import com.katdmy.android.bluetoothreadermusic.ui.vm.MainViewModel
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
+import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
 import kotlinx.coroutines.launch
 
@@ -61,6 +62,7 @@ fun BTReaderApp(
     onChangeUseTTS: (Boolean) -> Unit,
     onSetTtsMode: (Int) -> Unit,
     onSetRandomVoice: (Boolean) -> Unit,
+    onSetTtsVolume: (Float) -> Unit,
     onClickRequestReadNotificationsPermission: () -> Unit,
     onClickRequestPostNotificationPermission: () -> Unit,
     onClickRequestBtPermission: () -> Unit,
@@ -79,6 +81,7 @@ fun BTReaderApp(
     val useTTS by BTRMDataStore.getValueFlow(USE_TTS_SF, context).collectAsState(initial = false)
     val ttsModeSelection by BTRMDataStore.getValueFlow(TTS_MODE, context).collectAsState(initial = 0)
     val randomVoice by BTRMDataStore.getValueFlow(RANDOM_VOICE, context).collectAsState(initial = false)
+    val ttsVolume by BTRMDataStore.getValueFlow(TTS_VOLUME, context).collectAsState(initial = 1f)
 
     val serviceHealth by StatusService.serviceHealth.collectAsState()
     var badgeNeeded by remember { mutableStateOf(false) }
@@ -164,9 +167,11 @@ fun BTReaderApp(
             when (it) {
                 Navigation.SettingsScreen -> {
                     SettingsScreen(
+                        serviceHealth = serviceHealth,
                         ttsModeSelection = ttsModeSelection,
                         addedApps = state.value.addedApps,
                         randomVoice = randomVoice,
+                        ttsVolume = ttsVolume,
                         voicesCount = state.value.voicesCount,
                         postNotificationPermissionGranted = permissions.value.postNotification,
                         readNotificationsPermissionGranted = permissions.value.readNotifications,
@@ -177,6 +182,7 @@ fun BTReaderApp(
                         onClickDeleteApp = onClickDeleteApp,
                         onClickAddApp = onAddApps,
                         onSetRandomVoice = onSetRandomVoice,
+                        onSetTtsVolume = onSetTtsVolume,
                         onClickOpenTTSSettings = onClickOpenTTSSettings,
                         openNotificationSettings = restartNotificationListener,
                         onClickRequestReadNotificationsPermission = onClickRequestReadNotificationsPermission,

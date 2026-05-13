@@ -43,6 +43,7 @@ import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getString
 import com.katdmy.android.bluetoothreadermusic.util.Constants.ONBOARDING_COMPLETE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
+import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
 import kotlinx.coroutines.launch
 import java.util.Locale
 import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
@@ -114,6 +115,7 @@ class ComposeActivity : ComponentActivity() {
                             onChangeUseTTS = ::onChangeUseTTS,
                             onSetTtsMode = ::onSetTtsMode,
                             onSetRandomVoice = ::onSetRandomVoice,
+                            onSetTtsVolume = ::onSetTtsVolume,
                             onClickRequestReadNotificationsPermission = ::onRequestReadNotificationsPermission,
                             onClickRequestPostNotificationPermission = ::onRequestShowNotificationPermission,
                             onClickRequestBtPermission = ::onRequestBtPermission,
@@ -310,8 +312,12 @@ class ComposeActivity : ComponentActivity() {
                 }
             }
 
+            val volume = BTRMDataStore.getValue(TTS_VOLUME, this@ComposeActivity) ?: 1f
+            val params = Bundle().apply {
+                putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volume*volume)
+            }
             val utteranceId = System.nanoTime().toString()
-            tts.speak(text, TextToSpeech.QUEUE_ADD, null, utteranceId)
+            tts.speak(text, TextToSpeech.QUEUE_ADD, params, utteranceId)
         }
     }
 
@@ -388,6 +394,12 @@ class ComposeActivity : ComponentActivity() {
     private fun onSetRandomVoice(newRandomVoice: Boolean) {
         lifecycleScope.launch {
             BTRMDataStore.saveValue(newRandomVoice, RANDOM_VOICE, this@ComposeActivity)
+        }
+    }
+
+    private fun onSetTtsVolume(newVolume: Float) {
+        lifecycleScope.launch {
+            BTRMDataStore.saveValue(newVolume, TTS_VOLUME, this@ComposeActivity)
         }
     }
 

@@ -40,6 +40,10 @@ class MainViewModel : ViewModel() {
         _uiState.update { it.copy(btStatus = newBtStatus)}
     }
 
+    fun onSetVoicesCount(newVoicesCount: Int) {
+        _uiState.update { it.copy(voicesCount = newVoicesCount) }
+    }
+
     fun onSetReadNotificationsPermission(newReadNotificationsPermission: Boolean) {
         _permissionState.update { it.copy(readNotifications = newReadNotificationsPermission)}
     }
@@ -54,9 +58,5 @@ class MainViewModel : ViewModel() {
 
     fun onSetBTStatusPermission(newBTStatusPermission: Boolean) {
         _permissionState.update { it.copy(btStatus = newBTStatusPermission) }
-    }
-
-    fun onSetVoicesCount(newVoicesCount: Int) {
-        _uiState.update { it.copy(voicesCount = newVoicesCount) }
     }
 }
