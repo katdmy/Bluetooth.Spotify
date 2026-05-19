@@ -67,6 +67,7 @@ dependencies {
     implementation libs.androidx.lifecycle.runtime.ktx
     implementation libs.com.google.android.material
     implementation libs.accompanist.drawablepainter
+    implementation libs.androidx.work.runtime
     implementation platform(libs.androidx.compose.bom)
     debugImplementation libs.androidx.compose.ui.tooling
     debugImplementation libs.androidx.compose.ui.test.manifest

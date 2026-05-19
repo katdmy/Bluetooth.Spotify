@@ -1,7 +1,7 @@
 [versions]
 gradle = "9.2.1"
 kotlin = "2.3.21"
-kotlin-coroutines = "1.10.2"
+kotlin-coroutines = "1.11.0"
 core-ktx = "1.18.0"
 appcompat = "1.7.1"
 constraintlayout = "2.2.1"
@@ -11,9 +11,10 @@ material3 = "1.4.0"
 androidx-compose = "1.11.1"
 datastore-preferences = "1.2.1"
 androidx-lifecycle-runtime-ktx = "2.10.0"
-material = "1.13.0"
+material = "1.14.0"
 accompanist-drawablepainter = "0.37.3"
 compose-bom = "2026.05.00"
+work-runtime = "2.11.2"
 
 [libraries]
 gradle = { module = "com.android.tools.build:gradle", version.ref = "gradle" }
@@ -41,6 +42,7 @@ accompanist-drawablepainter = { group = "com.google.accompanist", name = "accomp
 androidx-compose-bom = { group = "androidx.compose", name = "compose-bom", version.ref = "compose-bom" }
 androidx-compose-ui-tooling = { group = "androidx.compose.ui", name = "ui-tooling", version.ref = "androidx-compose" }
 androidx-compose-ui-test-manifest = { group = "androidx.compose.ui", name = "ui-test-manifest", version.ref = "androidx-compose" }
+androidx-work-runtime = { group = "androidx.work", name = "work-runtime-ktx", version.ref = "work-runtime" }
 
 [plugins]
 compose-compiler = { id = "org.jetbrains.kotlin.plugin.compose", version.ref = "kotlin" }
