@@ -33,7 +33,6 @@ import androidx.core.content.edit
 import com.katdmy.android.bluetoothreadermusic.data.models.NotificationFingerprint
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
 import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
-import com.katdmy.android.bluetoothreadermusic.util.DebugLog
 import com.katdmy.android.bluetoothreadermusic.util.ServiceHealthBus
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -79,12 +78,14 @@ class NotificationListener : NotificationListenerService() {
     }
 
     override fun onListenerConnected() {
-        DebugLog.add(this, "Notification service connected")
+        //DebugLog.add(this, "Service connected")
 
         tts = TextToSpeech(this) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
             if (ttsReady) ttsInitialized()
-            else DebugLog.add(this, "TTS initialization failed")
+            else {
+                //DebugLog.add(this, "TTS initialization failed")
+            }
         }
 
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
@@ -160,7 +161,7 @@ class NotificationListener : NotificationListenerService() {
     }
 
     override fun onListenerDisconnected() {
-        DebugLog.add(this, "Notification service disconnected")
+        //DebugLog.add(this, "Service disconnected")
         requestRebind(ComponentName(this, NotificationListener::class.java))
         super.onListenerDisconnected()
     }
@@ -206,7 +207,6 @@ class NotificationListener : NotificationListenerService() {
                 queueCounter.decrementAndGet()
             }
         })
-        DebugLog.add(this, "TTS initialized")
 
         refreshValidVoices()
     }
@@ -240,7 +240,6 @@ class NotificationListener : NotificationListenerService() {
     private fun refreshValidVoices() {
         val targetLang = Locale.getDefault().language
         val allVoices = tts.voices ?: run {
-            DebugLog.add(this, "No valid voices installed for $targetLang")
             validRandomVoices = emptyList()
             defaultFallbackVoice = null
             return
@@ -260,8 +259,6 @@ class NotificationListener : NotificationListenerService() {
         }
         validRandomVoices = safeVoices
         defaultFallbackVoice = safeVoices.firstOrNull()
-
-        DebugLog.add(this, "Voices loaded: ${validRandomVoices.size} for locale ${Locale.getDefault()}")
     }
 
 
@@ -353,12 +350,12 @@ class NotificationListener : NotificationListenerService() {
         try {
             tts.voice = nextVoice
         } catch (_: Exception) {
-            DebugLog.add(this@NotificationListener, "Error setting voice: ${nextVoice?.name}")
+            //DebugLog.add(this@NotificationListener, "Error setting voice: ${nextVoice?.name}")
             try {
                 defaultFallbackVoice?.let { tts.voice = it }
                     ?: tts.setLanguage(Locale.getDefault())
             } catch (_: Exception) {
-                DebugLog.add(this@NotificationListener, "Fallback didn't work, using system default")
+                //DebugLog.add(this@NotificationListener, "Fallback didn't work, using system default")
             }
         }
 

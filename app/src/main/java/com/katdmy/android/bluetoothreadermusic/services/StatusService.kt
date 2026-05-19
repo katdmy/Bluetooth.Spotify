@@ -28,7 +28,6 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import androidx.core.content.edit
 import com.katdmy.android.bluetoothreadermusic.data.models.NotificationUiState
-import com.katdmy.android.bluetoothreadermusic.util.DebugLog
 import com.katdmy.android.bluetoothreadermusic.util.ServiceHealthBus
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -173,8 +172,6 @@ class StatusService: Service() {
                 if (newState != serviceHealth.value) {
                     serviceHealth.emit(newState)
                 }
-                if (newState == ServiceStatus.Dead)
-                    DebugLog.add(this@StatusService, "Service health check failed")
 
                 prefs.edit { putLong(SERVICE_LAST_HEARTBEAT, lastSavedHeartbeat) }
             }

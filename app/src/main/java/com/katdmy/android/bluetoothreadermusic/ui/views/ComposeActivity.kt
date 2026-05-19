@@ -37,7 +37,6 @@ import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.ui.vm.MainViewModel
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.BluetoothConnectionChecker
-import com.katdmy.android.bluetoothreadermusic.util.Constants.LOG_ENABLED
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getList
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getString
 import com.katdmy.android.bluetoothreadermusic.util.Constants.ONBOARDING_COMPLETE
@@ -47,7 +46,6 @@ import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
 import kotlinx.coroutines.launch
 import java.util.Locale
 import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
-import com.katdmy.android.bluetoothreadermusic.util.DebugLog
 import kotlinx.coroutines.flow.map
 
 class ComposeActivity : ComponentActivity() {
@@ -119,8 +117,7 @@ class ComposeActivity : ComponentActivity() {
                             onClickRequestPostNotificationPermission = ::onRequestShowNotificationPermission,
                             onClickRequestBtPermission = ::onRequestBtPermission,
                             onClickForceRestartTTS = ::onClickForceRestartTTS,
-                            onClickOpenTTSSettings = ::onClickOpenTTSSettings,
-                            onChangeUseLogs = ::onChangeUseLogs
+                            onClickOpenTTSSettings = ::onClickOpenTTSSettings
                         )
                     else
                         OnboardingScreen(
@@ -290,13 +287,13 @@ class ComposeActivity : ComponentActivity() {
 
                 if (nextVoice == null) {
                     tts.language = Locale.getDefault()
-                    DebugLog.add(this@ComposeActivity, "Error changing voice, using default voice instead. Try check available voices list on Settings screen")
+                    //DebugLog.add(this@ComposeActivity, "Error changing voice, using default voice instead. Try check available voices list on Settings screen")
                 } else {
                     try {
                         tts.voice = nextVoice
                     } catch (_: Exception) {
                         tts.language = Locale.getDefault()
-                        DebugLog.add(this@ComposeActivity, "Error setting voice: ${nextVoice.name}")
+                        //DebugLog.add(this@ComposeActivity, "Error setting voice: ${nextVoice.name}")
                     }
                 }
             }
@@ -383,11 +380,6 @@ class ComposeActivity : ComponentActivity() {
     private fun onSetRandomVoice(newRandomVoice: Boolean) {
         lifecycleScope.launch {
             BTRMDataStore.saveValue(newRandomVoice, RANDOM_VOICE, this@ComposeActivity)
-            if (newRandomVoice) {
-                DebugLog.add(this@ComposeActivity, "Random voice enabled")
-            } else {
-                DebugLog.add(this@ComposeActivity, "Random voice disabled")
-            }
         }
     }
 
@@ -442,13 +434,4 @@ class ComposeActivity : ComponentActivity() {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         })
     }
-
-    private fun onChangeUseLogs(newUseLogs: Boolean) {
-        lifecycleScope.launch {
-            BTRMDataStore.saveValue(newUseLogs, LOG_ENABLED, this@ComposeActivity)
-        }
-    }
 }
-
-
-
