@@ -26,8 +26,6 @@ class RestartServiceWorker(
 
         val serviceIntent = Intent(applicationContext, StatusService::class.java)
 
-        delay(5000)
-
         if (StatusService.serviceHealth.value != ServiceStatus.Working) {
             ContextCompat.startForegroundService(
                 applicationContext,
