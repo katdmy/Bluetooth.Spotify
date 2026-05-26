@@ -11,7 +11,6 @@ import androidx.work.WorkerParameters
 import com.katdmy.android.bluetoothreadermusic.data.ServiceStatus
 import com.katdmy.android.bluetoothreadermusic.services.NotificationListener
 import com.katdmy.android.bluetoothreadermusic.services.StatusService
-import kotlinx.coroutines.delay
 
 class RestartServiceWorker(
     appContext: Context,

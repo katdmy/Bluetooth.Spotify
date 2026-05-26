@@ -1,9 +1,7 @@
 package com.katdmy.android.bluetoothreadermusic.ui.views
 
 import android.Manifest
-import android.annotation.SuppressLint
 import android.content.Intent
-import android.content.IntentFilter
 import android.content.pm.PackageManager
 import android.media.AudioAttributes
 import android.media.AudioFocusRequest
@@ -31,44 +29,39 @@ import androidx.lifecycle.lifecycleScope
 import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
 import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
-import com.katdmy.android.bluetoothreadermusic.receivers.BtBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.services.StatusService
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.ui.vm.MainViewModel
+import com.katdmy.android.bluetoothreadermusic.util.BTConnectionState
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.BluetoothConnectionChecker
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getList
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getString
 import com.katdmy.android.bluetoothreadermusic.util.Constants.ONBOARDING_COMPLETE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
+import com.katdmy.android.bluetoothreadermusic.util.Constants.SHOW_LOG
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
 import kotlinx.coroutines.launch
 import java.util.Locale
 import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
+import com.katdmy.android.bluetoothreadermusic.util.DebugLog
 import kotlinx.coroutines.flow.map
 
 class ComposeActivity : ComponentActivity() {
 
     private val viewModel by viewModels<MainViewModel>()
-    private lateinit var btBroadcastReceiver: BtBroadcastReceiver
     private lateinit var requestPermissionLauncher: ActivityResultLauncher<Array<String>>
 
     private lateinit var tts: TextToSpeech
     private lateinit var audioManager: AudioManager
     private lateinit var focusRequest: AudioFocusRequest
-    private var currentVoice: Voice? = null
+    private var currentVoiceName: String = ""
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         enableEdgeToEdge()
-
-        btBroadcastReceiver = BtBroadcastReceiver(
-            changeConnectionStatus = {
-                viewModel::onChangeBtStatus
-            }
-        )
 
         initTTS()
 
@@ -84,11 +77,10 @@ class ComposeActivity : ComponentActivity() {
             if (permissionAndGrant.keys.contains(Manifest.permission.BLUETOOTH_CONNECT)) {
                 viewModel.onSetBTStatusPermission(permissionAndGrant[Manifest.permission.BLUETOOTH_CONNECT] == true)
                 if (permissionAndGrant[Manifest.permission.BLUETOOTH_CONNECT] == true)
-                    getInitialBluetoothStatus(viewModel::onChangeBtStatus)
+                    getInitialBluetoothStatus(BTConnectionState::set)
             }
         }
 
-        registerReceivers()
         val intent = Intent(this@ComposeActivity, StatusService::class.java)
         startForegroundService(intent)
 
@@ -116,6 +108,7 @@ class ComposeActivity : ComponentActivity() {
                             onClickRequestReadNotificationsPermission = ::onRequestReadNotificationsPermission,
                             onClickRequestPostNotificationPermission = ::onRequestShowNotificationPermission,
                             onClickRequestBtPermission = ::onRequestBtPermission,
+                            onChangeShowLog = ::onChangeShowLog,
                             onClickForceRestartTTS = ::onClickForceRestartTTS,
                             onClickOpenTTSSettings = ::onClickOpenTTSSettings
                         )
@@ -171,12 +164,7 @@ class ComposeActivity : ComponentActivity() {
         val btPermission = checkBtPermission()
         viewModel.onSetBTStatusPermission(btPermission)
         if (btPermission)
-            getInitialBluetoothStatus(viewModel::onChangeBtStatus)
-    }
-
-    override fun onDestroy() {
-        super.onDestroy()
-        unregisterReceiver(btBroadcastReceiver)
+            getInitialBluetoothStatus(BTConnectionState::set)
     }
 
     private fun isAppInstalled(packageName: String): Boolean {
@@ -189,19 +177,6 @@ class ComposeActivity : ComponentActivity() {
             true
         } catch (_: PackageManager.NameNotFoundException) {
             false
-        }
-    }
-
-    @SuppressLint("UnspecifiedRegisterReceiverFlag")
-    private fun registerReceivers() {
-        val btStatusIntentFilter = IntentFilter().apply {
-            addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED")
-        }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            registerReceiver(btBroadcastReceiver, btStatusIntentFilter,
-                RECEIVER_EXPORTED)
-        } else {
-            registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
         }
     }
 
@@ -282,18 +257,20 @@ class ComposeActivity : ComponentActivity() {
                 }
 
                 val nextVoice = randomVoices
-                    .filter { it != currentVoice }
+                    .filter { it.name != currentVoiceName }
                     .randomOrNull()
 
                 if (nextVoice == null) {
                     tts.language = Locale.getDefault()
-                    //DebugLog.add(this@ComposeActivity, "Error changing voice, using default voice instead. Try check available voices list on Settings screen")
+                    DebugLog.add("Error changing voice, using default voice instead. Try check available voices list on Settings screen")
                 } else {
                     try {
                         tts.voice = nextVoice
+                        currentVoiceName = nextVoice.name
+                        DebugLog.add("Voice selected: ${nextVoice.name}")
                     } catch (_: Exception) {
                         tts.language = Locale.getDefault()
-                        //DebugLog.add(this@ComposeActivity, "Error setting voice: ${nextVoice.name}")
+                        DebugLog.add("Error setting voice: ${nextVoice.name}")
                     }
                 }
             }
@@ -386,6 +363,12 @@ class ComposeActivity : ComponentActivity() {
     private fun onSetTtsVolume(newVolume: Float) {
         lifecycleScope.launch {
             BTRMDataStore.saveValue(newVolume, TTS_VOLUME, this@ComposeActivity)
+        }
+    }
+
+    private fun onChangeShowLog(newShowLog: Boolean) {
+        lifecycleScope.launch {
+            BTRMDataStore.saveValue(newShowLog, SHOW_LOG, this@ComposeActivity)
         }
     }
 

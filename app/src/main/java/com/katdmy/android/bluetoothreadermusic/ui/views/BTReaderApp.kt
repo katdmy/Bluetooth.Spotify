@@ -40,11 +40,14 @@ import com.katdmy.android.bluetoothreadermusic.data.ServiceStatus
 import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
 import com.katdmy.android.bluetoothreadermusic.services.StatusService
 import com.katdmy.android.bluetoothreadermusic.ui.vm.MainViewModel
+import com.katdmy.android.bluetoothreadermusic.util.BTConnectionState
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore.getValueFlow
 import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
+import com.katdmy.android.bluetoothreadermusic.util.Constants.SHOW_LOG
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
+import com.katdmy.android.bluetoothreadermusic.util.DebugLog
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalAnimationApi::class)
@@ -64,6 +67,7 @@ fun BTReaderApp(
     onClickRequestReadNotificationsPermission: () -> Unit,
     onClickRequestPostNotificationPermission: () -> Unit,
     onClickRequestBtPermission: () -> Unit,
+    onChangeShowLog: (Boolean) -> Unit,
     onClickForceRestartTTS: () -> Unit,
     onClickOpenTTSSettings: () -> Unit,
     modifier: Modifier = Modifier
@@ -80,6 +84,9 @@ fun BTReaderApp(
     val ttsModeSelection by getValueFlow(TTS_MODE, context).collectAsState(initial = 0)
     val randomVoice by getValueFlow(RANDOM_VOICE, context).collectAsState(initial = false)
     val ttsVolume by getValueFlow(TTS_VOLUME, context).collectAsState(initial = 1f)
+    val showLog by getValueFlow(SHOW_LOG, context).collectAsState(initial = false)
+    val messages by DebugLog.messages.collectAsState()
+    val btState by BTConnectionState.state.collectAsState()
 
     val serviceHealth by StatusService.serviceHealth.collectAsState()
     var badgeNeeded by remember { mutableStateOf(false) }
@@ -174,7 +181,8 @@ fun BTReaderApp(
                         postNotificationPermissionGranted = permissions.value.postNotification,
                         readNotificationsPermissionGranted = permissions.value.readNotifications,
                         btStatusPermissionGranted = permissions.value.btStatus,
-                        btStatus = state.value.btStatus,
+                        btStatus = btState,
+                        showLog = showLog == true,
                         onGetInstalledLaunchableApps = onGetInstalledLaunchableApps,
                         onSetTtsMode = onSetTtsMode,
                         onClickDeleteApp = onClickDeleteApp,
@@ -186,6 +194,10 @@ fun BTReaderApp(
                         onClickRequestReadNotificationsPermission = onClickRequestReadNotificationsPermission,
                         onClickRequestPostNotificationPermission = onClickRequestPostNotificationPermission,
                         onClickRequestBtPermission = onClickRequestBtPermission,
+                        onChangeShowLog = { newShowLog ->
+                            DebugLog.clear()
+                            onChangeShowLog(newShowLog)
+                        },
                         onClickForceRestartTTS = onClickForceRestartTTS,
                         onClickPrivacyPolicy = { navigation = Navigation.PrivacyPolicyScreeen }
                     )
@@ -195,11 +207,14 @@ fun BTReaderApp(
                     val enablePermission = stringResource(R.string.enable_permission)
                     MainScreen(
                         testTextToSpeech = testTextToSpeech,
-                        onTestTextToSpeechChange = { newText -> testTextToSpeech = newText },
-                        useTTS = useTTS == true,
                         isReadingTestText = isReadingTestText.value,
+                        showLog = showLog == true,
+                        messages = messages,
+                        useTTS = useTTS == true,
+                        onTestTextToSpeechChange = { newText -> testTextToSpeech = newText },
                         onClickReadTestText = onClickReadTestText,
                         onClickStopReading = onClickStopReading,
+                        onClearLog = DebugLog::clear,
                         onChangeUseTTS = { newUseTTS ->
                             if (permissions.value.readNotifications)
                                 onChangeUseTTS(newUseTTS)

@@ -27,10 +27,6 @@ class MainViewModel : ViewModel() {
         _uiState.update { it.copy(addedApps = newInstalledApps) }
     }
 
-    fun onChangeBtStatus(newBtStatus: String) {
-        _uiState.update { it.copy(btStatus = newBtStatus)}
-    }
-
     fun onSetVoicesCount(newVoicesCount: Int) {
         _uiState.update { it.copy(voicesCount = newVoicesCount) }
     }

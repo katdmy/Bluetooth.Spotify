@@ -12,6 +12,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
@@ -35,11 +37,14 @@ import com.katdmy.android.bluetoothreadermusic.ui.views.helper.BtReaderButton
 @Composable
 fun MainScreen(
     testTextToSpeech: String,
-    onTestTextToSpeechChange: (String) -> Unit,
-    useTTS: Boolean,
     isReadingTestText: Boolean,
+    showLog: Boolean,
+    messages: List<String>,
+    useTTS: Boolean,
+    onTestTextToSpeechChange: (String) -> Unit,
     onClickReadTestText: (String) -> Unit,
     onClickStopReading: () -> Unit,
+    onClearLog: () -> Unit,
     onChangeUseTTS: (Boolean) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -108,7 +113,36 @@ fun MainScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.weight(1f))
+            if (showLog)
+                Card(
+                    modifier = modifier.weight(1f),
+                    elevation = CardDefaults.elevatedCardElevation(4.dp),
+                ) {
+                    Column(modifier = Modifier.padding(16.dp)) {
+                        Text(
+                            text = stringResource(R.string.log_messages),
+                            style = MaterialTheme.typography.headlineMedium, // Красивый заголовок
+                            modifier = Modifier.padding(bottom = 12.dp)
+                        )
+                        LazyColumn(modifier = Modifier
+                            .fillMaxWidth().weight(1f)
+                        ) {
+                            items(messages) { message ->
+                                Text(text = message)
+                            }
+                        }
+                        BtReaderButton(
+                            text = stringResource(R.string.log_messages_clear),
+                            onClickAction = onClearLog,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp),
+                            painter = painterResource(R.drawable.ic_delete)
+                        )
+                    }
+                }
+            else
+                Spacer(modifier = Modifier.weight(1f))
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -143,13 +177,23 @@ fun MainScreen(
 fun MainScreenPreview() {
     BtReaderMusicTheme {
         MainScreen(
+            testTextToSpeech = "",
+            isReadingTestText = false,
+            showLog = true,
+            messages = listOf(
+                "[12:41:02] BootReceiver triggered",
+                "[12:41:15] Worker started",
+                "[12:41:22] Bluetooth disconnected",
+                "[12:41:33] Bluetooth connected",
+                "[12:41:35] TTS initialized",
+                "[12:41:40] Voice selected: ko-KR-voice-3"
+            ),
+            onTestTextToSpeechChange = {},
             onClickReadTestText = {},
             onClickStopReading = {},
+            onClearLog = {},
             onChangeUseTTS = {},
-            testTextToSpeech = "",
-            onTestTextToSpeechChange = {},
             useTTS = false,
-            isReadingTestText = false,
         )
     }
 }
@@ -159,13 +203,23 @@ fun MainScreenPreview() {
 fun MainScreenPreviewInRussian() {
     BtReaderMusicTheme {
         MainScreen(
+            testTextToSpeech = "",
+            isReadingTestText = false,
+            showLog = false,
+            messages = listOf(
+                "[12:41:02] BootReceiver triggered",
+                "[12:41:15] Worker started",
+                "[12:41:22] Bluetooth disconnected",
+                "[12:41:33] Bluetooth connected",
+                "[12:41:35] TTS initialized",
+                "[12:41:40] Voice selected: ko-KR-voice-3"
+            ),
+            onTestTextToSpeechChange = {},
             onClickReadTestText = {},
             onClickStopReading = {},
+            onClearLog = {},
             onChangeUseTTS = {},
-            testTextToSpeech = "",
-            onTestTextToSpeechChange = {},
             useTTS = false,
-            isReadingTestText = false
         )
     }
 }

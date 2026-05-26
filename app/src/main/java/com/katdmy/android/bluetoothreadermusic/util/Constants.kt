@@ -47,4 +47,10 @@ object Constants {
     TTS_VOLUME - volume for tts engine
     */
     val TTS_VOLUME = floatPreferencesKey("TTS_VOLUME")
+
+    /*
+    SHOW_LOG - should show log card on main screen or no
+    */
+    val SHOW_LOG = booleanPreferencesKey("SHOW_LOG")
+
 }

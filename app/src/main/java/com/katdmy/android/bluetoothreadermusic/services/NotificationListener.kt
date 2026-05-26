@@ -13,7 +13,6 @@ import android.service.notification.StatusBarNotification
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import android.speech.tts.Voice
-//import android.util.Log
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.SERVICE_LAST_HEARTBEAT
@@ -31,14 +30,18 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import androidx.core.content.edit
 import com.katdmy.android.bluetoothreadermusic.data.models.NotificationFingerprint
+import com.katdmy.android.bluetoothreadermusic.receivers.BtBroadcastReceiver
+import com.katdmy.android.bluetoothreadermusic.util.BTConnectionState
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
 import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
+import com.katdmy.android.bluetoothreadermusic.util.DebugLog
 import com.katdmy.android.bluetoothreadermusic.util.ServiceHealthBus
 import java.util.concurrent.atomic.AtomicInteger
 
 
 class NotificationListener : NotificationListenerService() {
 
+    private lateinit var btBroadcastReceiver: BtBroadcastReceiver
     private lateinit var listeningCommunicator: ListeningCommunicator
     private lateinit var tts: TextToSpeech
     private lateinit var audioManager: AudioManager
@@ -55,8 +58,7 @@ class NotificationListener : NotificationListenerService() {
     @Volatile
     private var validRandomVoices: List<Voice> = emptyList()
     @Volatile
-    private var currentVoice: Voice? = null
-    private var defaultFallbackVoice: Voice? = null
+    private var currentVoiceName: String = ""
 
     @Volatile
     private var ttsReady: Boolean = false
@@ -78,13 +80,20 @@ class NotificationListener : NotificationListenerService() {
     }
 
     override fun onListenerConnected() {
-        //DebugLog.add(this, "Service connected")
+        DebugLog.add("Service started")
 
         tts = TextToSpeech(this) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
-            if (ttsReady) ttsInitialized()
+            if (ttsReady) {
+                ttsInitialized()
+                DebugLog.add("TTS initialized")
+                for (engine in tts.engines) {
+                    DebugLog.add("Installed engine: ${engine.name}")
+                }
+                DebugLog.add("Loaded voices: ${validRandomVoices.size}")
+            }
             else {
-                //DebugLog.add(this, "TTS initialization failed")
+                DebugLog.add("TTS initialization failed")
             }
         }
 
@@ -98,6 +107,11 @@ class NotificationListener : NotificationListenerService() {
                 })
                 build()
             }
+
+        btBroadcastReceiver = BtBroadcastReceiver(
+            changeConnectionStatus = BTConnectionState::set
+        )
+
         listeningCommunicator = ListeningCommunicator()
 
         serviceScope.launch {
@@ -150,18 +164,22 @@ class NotificationListener : NotificationListenerService() {
             addAction("com.katdmy.android.bluetoothreadermusic.onNotificationStartTTSClick")
             addAction("com.katdmy.android.bluetoothreadermusic.forceRestartTTS")
         }
+        val btStatusIntentFilter = IntentFilter().apply {
+            addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED")
+        }
         @SuppressLint("UnspecifiedRegisterReceiverFlag")
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             registerReceiver(listeningCommunicator, notificationsIntentFilter, RECEIVER_EXPORTED)
+            registerReceiver(btBroadcastReceiver, btStatusIntentFilter,  RECEIVER_EXPORTED)
         } else {
             registerReceiver(listeningCommunicator, notificationsIntentFilter)
+            registerReceiver(btBroadcastReceiver, btStatusIntentFilter)
         }
 
         startHeartbeat()
     }
 
     override fun onListenerDisconnected() {
-        //DebugLog.add(this, "Service disconnected")
         requestRebind(ComponentName(this, NotificationListener::class.java))
         super.onListenerDisconnected()
     }
@@ -212,7 +230,9 @@ class NotificationListener : NotificationListenerService() {
     }
 
     override fun onDestroy() {
+        DebugLog.add("Service stopped")
         unregisterReceiver(listeningCommunicator)
+        unregisterReceiver(btBroadcastReceiver)
         super.onDestroy()
     }
 
@@ -241,7 +261,6 @@ class NotificationListener : NotificationListenerService() {
         val targetLang = Locale.getDefault().language
         val allVoices = tts.voices ?: run {
             validRandomVoices = emptyList()
-            defaultFallbackVoice = null
             return
         }
 
@@ -258,7 +277,6 @@ class NotificationListener : NotificationListenerService() {
             }
         }
         validRandomVoices = safeVoices
-        defaultFallbackVoice = safeVoices.firstOrNull()
     }
 
 
@@ -344,18 +362,20 @@ class NotificationListener : NotificationListenerService() {
         }
 
         val nextVoice = validRandomVoices
-            .filter { it != currentVoice }
-            .randomOrNull() ?: currentVoice
+            .filter { it.name != currentVoiceName }
+            .randomOrNull()
 
-        try {
-            tts.voice = nextVoice
-        } catch (_: Exception) {
-            //DebugLog.add(this@NotificationListener, "Error setting voice: ${nextVoice?.name}")
+        if (nextVoice == null) {
+            tts.language = Locale.getDefault()
+            DebugLog.add("Error changing voice, using default voice instead. Try check available voices list on Settings screen")
+        } else {
             try {
-                defaultFallbackVoice?.let { tts.voice = it }
-                    ?: tts.setLanguage(Locale.getDefault())
+                tts.voice = nextVoice
+                currentVoiceName = nextVoice.name
+                DebugLog.add("Voice selected: ${nextVoice.name}")
             } catch (_: Exception) {
-                //DebugLog.add(this@NotificationListener, "Fallback didn't work, using system default")
+                tts.language = Locale.getDefault()
+                DebugLog.add("Error setting voice: ${nextVoice.name}")
             }
         }
 
