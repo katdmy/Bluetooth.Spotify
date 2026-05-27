@@ -46,7 +46,9 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
 import com.katdmy.android.bluetoothreadermusic.util.DebugLog
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 
 class ComposeActivity : ComponentActivity() {
 
@@ -130,30 +132,37 @@ class ComposeActivity : ComponentActivity() {
                 .map { it?.getList() ?: emptyList() }
                 .map { it.filter { packageName -> isAppInstalled(packageName) } }
                 .map { installedApps ->
-                    installedApps.map { app ->
-                        val appInfo =
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                packageManager.getApplicationInfo(
-                                    app,
-                                    PackageManager.ApplicationInfoFlags.of(0)
-                                )
-                            } else {
-                                packageManager.getApplicationInfo(app, 0)
-                            }
-                        val name = packageManager.getApplicationLabel(appInfo).toString()
-                        val icon = packageManager.getApplicationIcon(app)
 
-                        InstalledApp(
-                            packageName = app,
-                            name = name,
-                            icon = icon
-                        )
+                    withContext(Dispatchers.IO) {
+
+                        installedApps.map { app ->
+                            val appInfo =
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                                    packageManager.getApplicationInfo(
+                                        app,
+                                        PackageManager.ApplicationInfoFlags.of(0)
+                                    )
+                                } else {
+                                    packageManager.getApplicationInfo(app, 0)
+                                }
+                            val name = packageManager.getApplicationLabel(appInfo).toString()
+                            val icon = packageManager.getApplicationIcon(app)
+
+                            InstalledApp(
+                                packageName = app,
+                                name = name,
+                                icon = icon
+                            )
+                        }
                     }
                 }
-                .collect { preparedApps ->
-                    viewModel.onSetInstalledApps(preparedApps)
-                }
+                .collect(viewModel::onSetAddedApps)
             }
+    }
+
+    override fun onDestroy() {
+        tts.shutdown()
+        super.onDestroy()
     }
 
     override fun onResume() {
@@ -328,30 +337,36 @@ class ComposeActivity : ComponentActivity() {
         }
     }
 
-    private fun getInstalledLaunchableApps(): List<InstalledApp> {
-        val pm = applicationContext.packageManager
+    private fun getInstalledLaunchableApps() {
+        lifecycleScope.launch {
+            withContext(Dispatchers.IO) {
+                val pm = applicationContext.packageManager
 
-        val intent = Intent(Intent.ACTION_MAIN).apply {
-            addCategory(Intent.CATEGORY_LAUNCHER)
-        }
+                val intent = Intent(Intent.ACTION_MAIN).apply {
+                    addCategory(Intent.CATEGORY_LAUNCHER)
+                }
 
-        val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            pm.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
-        } else {
-            pm.queryIntentActivities(intent, 0)
-        }
+                val resolveInfos = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    pm.queryIntentActivities(intent, PackageManager.ResolveInfoFlags.of(0))
+                } else {
+                    pm.queryIntentActivities(intent, 0)
+                }
 
-        return resolveInfos
-            .map { it.activityInfo.applicationInfo }
-            .distinctBy { it.packageName }
-            .map { appInfo ->
-                InstalledApp(
-                    packageName = appInfo.packageName,
-                    name = pm.getApplicationLabel(appInfo).toString(),
-                    icon = pm.getApplicationIcon(appInfo)
+                viewModel.onSetInstalledApps(
+                    resolveInfos
+                        .map { it.activityInfo.applicationInfo }
+                        .distinctBy { it.packageName }
+                        .map { appInfo ->
+                            InstalledApp(
+                                packageName = appInfo.packageName,
+                                name = pm.getApplicationLabel(appInfo).toString(),
+                                icon = pm.getApplicationIcon(appInfo)
+                            )
+                        }
+                        .sortedBy { it.name.lowercase() }
                 )
             }
-            .sortedBy { it.name.lowercase() }
+        }
     }
 
     private fun onSetRandomVoice(newRandomVoice: Boolean) {

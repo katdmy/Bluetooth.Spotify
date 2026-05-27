@@ -39,13 +39,14 @@ import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.AppChooseDialog
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.BtReaderButton
-import com.katdmy.android.bluetoothreadermusic.ui.views.helper.InstalledAppColumn
+import com.katdmy.android.bluetoothreadermusic.ui.views.helper.AddedAppColumn
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.ServiceHealthIndicator
 
 @Composable
 fun SettingsScreen(
     serviceHealth: ServiceStatus,
     ttsModeSelection: Int?,
+    installedApps: List<InstalledApp>,
     addedApps: List<InstalledApp>,
     randomVoice: Boolean?,
     ttsVolume: Float?,
@@ -55,7 +56,7 @@ fun SettingsScreen(
     btStatusPermissionGranted: Boolean,
     btStatus: String,
     showLog: Boolean,
-    onGetInstalledLaunchableApps: () -> List<InstalledApp>,
+    onGetInstalledLaunchableApps: () -> Unit,
     onSetTtsMode: (Int) -> Unit,
     onClickDeleteApp: (String) -> Unit,
     onClickAddApp: (List<String>) -> Unit,
@@ -209,8 +210,8 @@ fun SettingsScreen(
                 }
 
                 if (addedApps.count() > 0) {
-                    InstalledAppColumn(
-                        installedApps = addedApps,
+                    AddedAppColumn(
+                        addedApps = addedApps,
                         enabled = ttsModeSelection == 1,
                         onClickDeleteApp = onClickDeleteApp,
                         modifier = Modifier.padding(top = 8.dp)
@@ -222,7 +223,10 @@ fun SettingsScreen(
                 ) {
                     BtReaderButton(
                         text = stringResource(R.string.add_installed_app),
-                        onClickAction = { openAppChooseDialog = true },
+                        onClickAction = {
+                            onGetInstalledLaunchableApps()
+                            openAppChooseDialog = true
+                        },
                         painter = painterResource(R.drawable.ic_add),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -403,9 +407,8 @@ fun SettingsScreen(
     }
 
     if (openAppChooseDialog) {
-        val installedLaunchableApps = onGetInstalledLaunchableApps()
         AppChooseDialog(
-            installedApps = installedLaunchableApps,
+            installedApps = installedApps,
             alreadyAdded = addedApps.map { it.packageName },
             onClickAdd = onClickAddApp,
             onDismiss = { openAppChooseDialog = false }
@@ -420,6 +423,7 @@ fun SettingsScreenPreview() {
         SettingsScreen(
             serviceHealth = ServiceStatus.Disabled,
             ttsModeSelection = 1,
+            installedApps = emptyList(),
             addedApps = listOf(
                 InstalledApp("org.whatsapp", "Whatsapp", null),
                 InstalledApp("org.telegram.messenger", "Telegram", null),
@@ -432,7 +436,7 @@ fun SettingsScreenPreview() {
             btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
             showLog = false,
-            onGetInstalledLaunchableApps = { emptyList() },
+            onGetInstalledLaunchableApps = {},
             onSetTtsMode = {},
             onClickDeleteApp = {},
             onClickAddApp = {},
@@ -457,6 +461,7 @@ fun SettingsScreenPreviewInRussian() {
         SettingsScreen(
             serviceHealth = ServiceStatus.Disabled,
             ttsModeSelection = 1,
+            installedApps = emptyList(),
             addedApps = listOf(
                 InstalledApp("org.whatsapp", "Whatsapp", null),
                 InstalledApp("org.telegram.messenger", "Telegram", null),
@@ -467,7 +472,7 @@ fun SettingsScreenPreviewInRussian() {
             btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
             showLog = false,
-            onGetInstalledLaunchableApps = { emptyList() },
+            onGetInstalledLaunchableApps = {},
             onSetTtsMode = {},
             onClickDeleteApp = {},
             onClickAddApp = {},

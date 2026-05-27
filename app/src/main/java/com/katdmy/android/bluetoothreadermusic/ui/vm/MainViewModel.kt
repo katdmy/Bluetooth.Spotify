@@ -24,7 +24,11 @@ class MainViewModel : ViewModel() {
     }
 
     fun onSetInstalledApps(newInstalledApps: List<InstalledApp>) {
-        _uiState.update { it.copy(addedApps = newInstalledApps) }
+        _uiState.update { it.copy(installedApps = newInstalledApps) }
+    }
+
+    fun onSetAddedApps(newAddedApps: List<InstalledApp>) {
+        _uiState.update { it.copy(addedApps = newAddedApps) }
     }
 
     fun onSetVoicesCount(newVoicesCount: Int) {

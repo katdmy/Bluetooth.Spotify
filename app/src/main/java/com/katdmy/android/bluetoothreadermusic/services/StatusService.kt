@@ -8,12 +8,7 @@ import android.app.Service
 import android.content.Intent
 import android.content.SharedPreferences
 import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
-import android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-import android.os.Build
-import android.os.Handler
 import android.os.IBinder
-import android.os.Looper
-import android.service.notification.StatusBarNotification
 import androidx.core.app.ServiceCompat
 import com.katdmy.android.bluetoothreadermusic.data.ServiceStatus
 import com.katdmy.android.bluetoothreadermusic.R
@@ -28,6 +23,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import androidx.core.content.edit
 import com.katdmy.android.bluetoothreadermusic.data.models.NotificationUiState
+import com.katdmy.android.bluetoothreadermusic.util.DebugLog
 import com.katdmy.android.bluetoothreadermusic.util.ServiceHealthBus
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -62,7 +58,12 @@ class StatusService: Service() {
 
         prefs = PrefsHelper.getPrefs(this)
 
-        startForegroundOnce()
+        createNotificationChannel()
+
+        if (!startForegroundOnce()) {
+            stopSelf()
+            return
+        }
 
         serviceScope.launch {
             combine(
@@ -84,17 +85,8 @@ class StatusService: Service() {
         startWatchdog()
     }
 
-    override fun onStartCommand(
-        intent: Intent?,
-        flags: Int,
-        startId: Int
-    ): Int {
-        if (intent?.action == "com.katdmy.android.bluetoothreadermusic.ACTION_NOTIFICATION_DISMISSED") {
-            handleNotificationDismiss()
-            return START_STICKY
-        }
-
-        return START_REDELIVER_INTENT
+    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+        return START_STICKY
     }
 
     override fun onDestroy() {
@@ -140,18 +132,20 @@ class StatusService: Service() {
         nm.notify(FOREGROUND_NOTIFICATION_ID, notification)
     }
 
-    private fun startForegroundOnce() {
-        val initialNotification = buildNotification(buildUiState(ServiceStatus.Disabled))
-        ServiceCompat.startForeground(
-            this@StatusService,  // service
-            FOREGROUND_NOTIFICATION_ID,  // id
-            initialNotification,  //notification
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                FOREGROUND_SERVICE_TYPE_SPECIAL_USE
-            } else {
+    private fun startForegroundOnce(): Boolean {
+        return try {
+            val initialNotification = buildNotification(buildUiState(ServiceStatus.Disabled))
+            ServiceCompat.startForeground(
+                this@StatusService,  // service
+                FOREGROUND_NOTIFICATION_ID,  // id
+                initialNotification,  //notification
                 FOREGROUND_SERVICE_TYPE_MANIFEST
-            }
-        )
+            )
+            true
+        } catch (e: Exception) {
+            DebugLog.add("Error with status service: ${e.localizedMessage}")
+            false
+        }
     }
 
     private fun startWatchdog() {
@@ -186,8 +180,6 @@ class StatusService: Service() {
     fun buildNotification(uiState: NotificationUiState): Notification {
         //Log.e("ListenerStatusService", "createNotification")
 
-        createNotificationChannel()
-
         val openActivityPendingIntent: PendingIntent =
             Intent(this, ComposeActivity::class.java).let { openActivityIntent ->
                 PendingIntent.getActivity(this, 0, openActivityIntent, PendingIntent.FLAG_IMMUTABLE)
@@ -202,22 +194,10 @@ class StatusService: Service() {
         )
             .build()
 
-        val deleteIntent = Intent(this, StatusService::class.java).apply {
-            action = "com.katdmy.android.bluetoothreadermusic.ACTION_NOTIFICATION_DISMISSED"
-        }
-
-        val deletePendingIntent = PendingIntent.getService(
-            this,
-            1,
-            deleteIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
         val foregroundNotification = Notification.Builder(this, "notification_reader_service")
             .setContentTitle(uiState.title)
             .setSmallIcon(uiState.icon)
             .setContentIntent(openActivityPendingIntent)
-            .setDeleteIntent(deletePendingIntent)
             .addAction(switchTTSAction)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -252,38 +232,6 @@ class StatusService: Service() {
         // если процесс перезапущен - prefs
         val persisted = prefs.getLong(SERVICE_LAST_HEARTBEAT, 0L)
         return now - persisted < 30_000
-    }
-
-    private fun isNotificationActive() : Boolean {
-        //Log.e("NotificationListener", "isNotificationActive")
-        val notificationManager = this.getSystemService(NOTIFICATION_SERVICE) as NotificationManager
-
-        val activeNotifications: Array<StatusBarNotification> = notificationManager.activeNotifications
-        for (notification in activeNotifications) {
-            if (notification.id == FOREGROUND_NOTIFICATION_ID)
-                return true
-        }
-        return false
-    }
-
-    private fun handleNotificationDismiss() {
-        val now = System.currentTimeMillis()
-        val lastDismiss = prefs.getLong("last_dismiss_time", 0L)
-
-        prefs.edit { putLong("last_dismiss_time", now) }
-
-        // если прошло больше 10 секунд - считаем случайным
-        if (now - lastDismiss > 5_000) {
-            Handler(Looper.getMainLooper()).postDelayed({
-                if (!isNotificationActive()) {
-                    val notification = buildNotification(buildUiState(serviceHealth.value))
-                    startForeground(FOREGROUND_NOTIFICATION_ID, notification)
-                }
-            }, 350)
-        } else {
-            // второй dismiss подряд - считаем намеренным
-            stopSelf()
-        }
     }
 }
 

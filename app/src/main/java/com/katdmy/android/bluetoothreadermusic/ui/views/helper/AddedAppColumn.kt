@@ -29,8 +29,8 @@ import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import kotlin.collections.forEach
 
 @Composable
-fun InstalledAppColumn(
-    installedApps: List<InstalledApp>,
+fun AddedAppColumn(
+    addedApps: List<InstalledApp>,
     enabled: Boolean,
     onClickDeleteApp: (String) -> Unit,
     modifier: Modifier = Modifier
@@ -40,7 +40,7 @@ fun InstalledAppColumn(
         modifier = modifier.fillMaxWidth()
             .padding(bottom = 8.dp)
     ) {
-        installedApps.forEach { messengerApp ->
+        addedApps.forEach { messengerApp ->
             MessengerAppCard(
                 messengerApp = messengerApp,
                 enabled = enabled,
@@ -100,10 +100,10 @@ fun MessengerAppCard(
 
 @Preview(showBackground = true)
 @Composable
-fun InstalledAppColumnPreview() {
+fun AddedAppColumnPreview() {
     BtReaderMusicTheme {
-        InstalledAppColumn(
-            installedApps = listOf(
+        AddedAppColumn(
+            addedApps = listOf(
                 InstalledApp("org.whatsapp", "Whatsapp", null),
                 InstalledApp("org.telegram.messenger", "Telegram", null),
             ),

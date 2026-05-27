@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -115,48 +116,58 @@ fun AppChooseDialog(
 
                     HorizontalDivider()
 
-                    LazyColumn(
-                        modifier = Modifier
+                    if (installedApps.isEmpty()) {
+                        Box(modifier = modifier
+                            .fillMaxWidth()
                             .weight(1f)
-                            .padding(horizontal = 8.dp)
-                    ) {
-                        items(filteredApps, key = { it.packageName }) { app ->
-                            val isAlreadyAdded = alreadyAdded.contains(app.packageName)
-                            val isChecked = selected[app.packageName] ?: false
+                        ) {
+                            //TODO(LoadingIndicator - when it will be in stable material3 lib)
+                            CircularProgressIndicator(modifier = Modifier.align(Alignment.Center))
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier
+                                .weight(1f)
+                                .padding(horizontal = 8.dp)
+                        ) {
+                            items(filteredApps, key = { it.packageName }) { app ->
+                                val isAlreadyAdded = alreadyAdded.contains(app.packageName)
+                                val isChecked = selected[app.packageName] ?: false
 
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .clickable(enabled = !isAlreadyAdded) {
-                                        selected[app.packageName] = !isChecked
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable(enabled = !isAlreadyAdded) {
+                                            selected[app.packageName] = !isChecked
+                                        }
+                                        .padding(12.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    app.icon?.let {
+                                        Image(
+                                            bitmap = it.toBitmap().asImageBitmap(),
+                                            contentDescription = "App Icon",
+                                            modifier = Modifier.size(40.dp)
+                                        )
                                     }
-                                    .padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                app.icon?.let {
-                                    Image(
-                                        bitmap = it.toBitmap().asImageBitmap(),
-                                        contentDescription = "App Icon",
-                                        modifier = Modifier.size(40.dp)
+
+                                    Spacer(modifier = Modifier.width(12.dp))
+
+                                    Text(
+                                        text = app.name,
+                                        modifier = Modifier.weight(1f)
+                                    )
+
+                                    Checkbox(
+                                        checked = isChecked,
+                                        onCheckedChange = {
+                                            if (!isAlreadyAdded) {
+                                                selected[app.packageName] = it
+                                            }
+                                        },
+                                        enabled = !isAlreadyAdded
                                     )
                                 }
-
-                                Spacer(modifier = Modifier.width(12.dp))
-
-                                Text(
-                                    text = app.name,
-                                    modifier = Modifier.weight(1f)
-                                )
-
-                                Checkbox(
-                                    checked = isChecked,
-                                    onCheckedChange = {
-                                        if (!isAlreadyAdded) {
-                                            selected[app.packageName] = it
-                                        }
-                                    },
-                                    enabled = !isAlreadyAdded
-                                )
                             }
                         }
                     }

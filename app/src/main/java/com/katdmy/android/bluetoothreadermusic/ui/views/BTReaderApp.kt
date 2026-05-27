@@ -37,7 +37,6 @@ import androidx.compose.ui.res.stringResource
 import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.data.Navigation
 import com.katdmy.android.bluetoothreadermusic.data.ServiceStatus
-import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
 import com.katdmy.android.bluetoothreadermusic.services.StatusService
 import com.katdmy.android.bluetoothreadermusic.ui.vm.MainViewModel
 import com.katdmy.android.bluetoothreadermusic.util.BTConnectionState
@@ -54,7 +53,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun BTReaderApp(
     viewModel: MainViewModel,
-    onGetInstalledLaunchableApps: () -> List<InstalledApp>,
+    onGetInstalledLaunchableApps: () -> Unit,
     onClickReadTestText: (String) -> Unit,
     restartNotificationListener: () -> Unit,
     onClickStopReading: () -> Unit,
@@ -174,6 +173,7 @@ fun BTReaderApp(
                     SettingsScreen(
                         serviceHealth = serviceHealth,
                         ttsModeSelection = ttsModeSelection,
+                        installedApps = state.value.installedApps,
                         addedApps = state.value.addedApps,
                         randomVoice = randomVoice,
                         ttsVolume = ttsVolume,

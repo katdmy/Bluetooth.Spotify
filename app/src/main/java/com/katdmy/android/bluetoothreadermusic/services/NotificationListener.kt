@@ -36,6 +36,9 @@ import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
 import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
 import com.katdmy.android.bluetoothreadermusic.util.DebugLog
 import com.katdmy.android.bluetoothreadermusic.util.ServiceHealthBus
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -48,6 +51,7 @@ class NotificationListener : NotificationListenerService() {
     private lateinit var focusRequest: AudioFocusRequest
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var heartbeatJob: Job? = null
+    private val ttsMutex = Mutex()
     private var recent = LinkedHashSet<NotificationFingerprint>()
     private val prefs by lazy { getSharedPreferences("service_state", MODE_PRIVATE) }
     private var lastSavedHeartbeat = 0L
@@ -216,13 +220,17 @@ class NotificationListener : NotificationListenerService() {
             override fun onDone(utteranceId: String) {
                 lastTtsStartTime = System.currentTimeMillis()
                 audioManager.abandonAudioFocusRequest(focusRequest)
-                queueCounter.decrementAndGet()
+                queueCounter.updateAndGet {
+                    maxOf(0, it - 1)
+                }
             }
 
             @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String) {
                 audioManager.abandonAudioFocusRequest(focusRequest)
-                queueCounter.decrementAndGet()
+                queueCounter.updateAndGet {
+                    maxOf(0, it - 1)
+                }
             }
         })
 
@@ -231,29 +239,60 @@ class NotificationListener : NotificationListenerService() {
 
     override fun onDestroy() {
         DebugLog.add("Service stopped")
-        unregisterReceiver(listeningCommunicator)
-        unregisterReceiver(btBroadcastReceiver)
-        super.onDestroy()
-    }
-
-    fun switchTTS(newUseTTS: Boolean) {
-        if (!newUseTTS) {
-            tts.stop()
-        } else {
-            restartTTS()
-        }
-    }
-
-    private fun restartTTS() {
         try {
+            unregisterReceiver(listeningCommunicator)
+        } catch (_: Exception) {}
+        try {
+            unregisterReceiver(btBroadcastReceiver)
+        } catch (_: Exception) {}
+
+        heartbeatJob?.cancel()
+
+        serviceScope.cancel()
+
+        try{
             tts.stop()
             tts.setOnUtteranceProgressListener(null)
             tts.shutdown()
         } catch (_: Exception) {}
 
-        tts = TextToSpeech(this) { status ->
+        super.onDestroy()
+    }
+
+    fun switchTTS(newUseTTS: Boolean) {
+        serviceScope.launch {
+            ttsMutex.withLock {
+                if (!newUseTTS) {
+                    try {
+                        tts.stop()
+                    } catch (_: Exception) {}
+                } else {
+                    restartTTSInternal()
+                }
+            }
+        }
+    }
+
+    private fun restartTTSInternal() {
+        try {
+            ttsReady = false
+
+            tts.stop()
+            tts.setOnUtteranceProgressListener(null)
+            tts.shutdown()
+        } catch (_: Exception) {}
+
+        tts = TextToSpeech(this@NotificationListener) { status ->
             ttsReady = status == TextToSpeech.SUCCESS
             if (ttsReady) ttsInitialized()
+        }
+    }
+
+    private fun restartTTS() {
+        serviceScope.launch {
+            ttsMutex.withLock {
+                restartTTSInternal()
+            }
         }
     }
 
@@ -383,29 +422,63 @@ class NotificationListener : NotificationListenerService() {
     }
 
     private fun ttsTrySpeak(text: String) {
-        if (!ttsReady)
-            return
+        serviceScope.launch {
+            ttsMutex.withLock {
+                if (!ttsReady)
+                    return@withLock
 
-        queueCounter.incrementAndGet()
-        if (queueCounter.get() > 20) {
-            tts.stop()
-            queueCounter.set(0)
-        }
+                audioManager.requestAudioFocus(focusRequest)
 
-        audioManager.requestAudioFocus(focusRequest)
+                val params = Bundle().apply {
+                    putFloat(
+                        TextToSpeech.Engine.KEY_PARAM_VOLUME,
+                        volumeCached*volumeCached
+                    )
+                }
+                val utteranceId = System.nanoTime().toString()
+                val result = try{
+                    tts.speak(
+                        text,
+                        TextToSpeech.QUEUE_ADD,
+                        params,
+                        utteranceId
+                    )
+                } catch (_: Exception) {
+                    TextToSpeech.ERROR
+                }
 
-        val params = Bundle().apply {
-            putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volumeCached*volumeCached)
-        }
-        val utteranceId = System.nanoTime().toString()
-        val result = tts.speak(text, TextToSpeech.QUEUE_ADD, params, utteranceId)
+                when (result) {
+                    TextToSpeech.ERROR -> {
+                        restartTTSInternal()
 
-        if (result == TextToSpeech.ERROR) {
-            restartTTS()
+                        serviceScope.launch {
+                            delay(3000)
 
-            serviceScope.launch {
-                delay(3000)
-                tts.speak(text, TextToSpeech.QUEUE_ADD, params, utteranceId)
+                            ttsMutex.withLock {
+                                try {
+                                    tts.speak(
+                                        text,
+                                        TextToSpeech.QUEUE_ADD,
+                                        params,
+                                        utteranceId
+                                    )
+                                } catch (_: Exception) {}
+                            }
+                        }
+                    }
+
+                    TextToSpeech.SUCCESS -> {
+                        queueCounter.incrementAndGet()
+
+                        if (queueCounter.get() > 20) {
+                            try {
+                                tts.stop()
+                            } catch (_: Exception) {}
+
+                            queueCounter.set(0)
+                        }
+                    }
+                }
             }
         }
     }
