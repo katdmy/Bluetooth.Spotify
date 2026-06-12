@@ -6,18 +6,18 @@ plugins {
 }
 
 android {
-    compileSdk 37
+    compileSdk = 37
 
     defaultConfig {
-        applicationId "com.katdmy.android.bluetoothreadermusic"
+        applicationId = "com.katdmy.android.bluetoothreadermusic"
         minSdkVersion 31
         targetSdkVersion 37
-        versionCode 14
-        versionName "14"
+        versionCode = 14
+        versionName = "14"
 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
-            useSupportLibrary true
+            useSupportLibrary = true
         }
         ndk {
             debugSymbolLevel = "FULL"
@@ -26,24 +26,21 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
-            shrinkResources true
+            minifyEnabled = true
+            shrinkResources = true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             ndk {
-                debugSymbolLevel 'FULL'
+                debugSymbolLevel = 'FULL'
             }
         }
     }
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_17
-        targetCompatibility JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_17.toString()
-    }
-    namespace 'com.katdmy.android.bluetoothreadermusic'
+    namespace = 'com.katdmy.android.bluetoothreadermusic'
     buildFeatures {
-        compose true
+        compose = true
     }
 }
 

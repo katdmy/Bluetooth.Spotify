@@ -48,6 +48,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.json.Json
 import java.util.concurrent.atomic.AtomicInteger
+import kotlin.time.Duration.Companion.milliseconds
 
 
 class NotificationListener : NotificationListenerService() {
@@ -196,7 +197,7 @@ class NotificationListener : NotificationListenerService() {
                         restartTTS()
                     }
 
-                    delay(10_000L)
+                    delay(10_000L.milliseconds)
                 }
             }
             launch {
@@ -276,7 +277,7 @@ class NotificationListener : NotificationListenerService() {
                         lastSavedHeartbeat = now
                     }
 
-                    delay(10_000)
+                    delay(10_000.milliseconds)
                 }
             } catch (_: Throwable) {}
         }
@@ -400,82 +401,6 @@ class NotificationListener : NotificationListenerService() {
         validRandomVoices = safeVoices
     }
 
-
-    /*override fun onNotificationPosted(sbn: StatusBarNotification) {
-
-        val packageName = sbn.packageName
-        val sortKey = sbn.notification?.sortKey
-        val key = sbn.key
-        val extras = sbn.notification?.extras
-        val aTitle = extras?.getCharSequence("android.title")
-        val aText = extras?.getCharSequence("android.text")
-
-        val bundles = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            extras?.getParcelableArray(
-                "android.messages",
-                Bundle::class.java
-            )
-        } else {
-            @Suppress("DEPRECATION")
-            extras?.getParcelableArray("android.messages")
-        }
-        var pSender = ""
-        var pText = ""
-
-        if (bundles != null) {
-            val msg = Notification.MessagingStyle.Message
-                .getMessagesFromBundleArray(bundles).last()
-
-            pText = msg.text.toString()
-            @Suppress("DEPRECATION")
-            pSender = (
-                    msg.senderPerson?.name
-                        ?: msg.sender
-                        ?: pSender
-                    ).toString()
-        }
-
-        val title = pSender.ifBlank { aTitle }
-        val text = pText.ifBlank { aText }
-
-        if (useTTSCached && title?.isNotBlank() == true && text?.isNotBlank() == true && key != null) {
-
-            val textToRead = "$title. $text"
-            val fingerprint = NotificationFingerprint(key, textToRead)
-            if (!recent.contains(fingerprint)) {
-                recent.add(fingerprint)
-                if (recent.size > 50) {
-                    recent.remove(recent.first())
-                }
-
-                when (ttsModeCached) {
-                    0 -> {
-                        if (packageName != applicationContext.packageName)
-                            readTTS(textToRead)
-                    }
-
-                    1 -> {
-                        if (settingsMapCached.containsKey(packageName)) {
-                            when (packageName) {
-                                "com.whatsapp" -> if (sortKey?.toInt() == 1)
-                                    readTTS(textToRead)
-
-                                "com.instagram.android" -> if (key.contains("|direct|"))
-                                    readTTS(textToRead)
-
-                                "org.telegram.messenger" -> readTTS(textToRead)
-
-                                else -> readTTS(textToRead)
-                            }
-                        }
-                    }
-
-                    else -> {}
-                }
-            }
-        }
-    }*/
-
     override fun onNotificationPosted(sbn: StatusBarNotification) {
 
         val packageName = sbn.packageName
@@ -514,7 +439,6 @@ class NotificationListener : NotificationListenerService() {
         val text = pText.ifBlank { aText }.toString()
 
         if (useTTSCached && title.isNotBlank() && text.isNotBlank() && key != null) {
-
             when (ttsModeCached) {
                 0 -> {
                     if (packageName != applicationContext.packageName) {
@@ -542,7 +466,7 @@ class NotificationListener : NotificationListenerService() {
                 1 -> {
                     if (settingsMapCached.containsKey(packageName)) {
                         val textToRead = getTextToRead(
-                            settingsMapCached[packageName]?.enabledParts,
+                            settingsMapCached[packageName]?.enabledParts ?: globalNotificationParts,
                             getAppName(this, packageName) ?: packageName,
                             title,
                             text
@@ -660,7 +584,7 @@ class NotificationListener : NotificationListenerService() {
                         restartTTSInternal()
 
                         serviceScope.launch {
-                            delay(3000)
+                            delay(3000.milliseconds)
 
                             ttsMutex.withLock {
                                 try {

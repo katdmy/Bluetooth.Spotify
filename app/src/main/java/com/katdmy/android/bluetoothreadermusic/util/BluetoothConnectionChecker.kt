@@ -53,7 +53,7 @@ class BluetoothConnectionChecker(
                 return "CONNECTED"
             }
         }
-        changeUseTTS(context, false)
+        //changeUseTTS(context, false)
         return "DISCONNECTED"
     }
 
