@@ -60,7 +60,7 @@ fun SettingsScreen(
     ttsModeSelection: Int?,
     installedApps: List<InstalledApp>,
     addedApps: List<InstalledApp>,
-    allAppSettings: List<AppVoiceSettings>,
+    allAppSettings: Map<String, AppVoiceSettings>,
     randomVoice: Boolean?,
     ttsVolume: Float?,
     voicesCount: Int,
@@ -236,6 +236,7 @@ fun SettingsScreen(
                 if (addedApps.count() > 0) {
                     AddedAppColumn(
                         addedApps = addedApps,
+                        allAppSettings = allAppSettings,
                         enabled = ttsModeSelection == 1,
                         onClickOpenAppSettings = { packageName ->
                             appToOpenSettings = packageName
@@ -494,8 +495,7 @@ fun SettingsScreen(
     }
     if (appToOpenSettings != null) {
         val onCloseAppSettings = { closeAppSettings = true }
-        val settings = allAppSettings
-            .firstOrNull { it.packageName == appToOpenSettings }
+        val settings = allAppSettings[appToOpenSettings]
             ?: AppVoiceSettings(packageName = appToOpenSettings!!)
 
         AppVoiceSettingsBottomSheet(
@@ -519,7 +519,7 @@ fun SettingsScreenPreview() {
                 InstalledApp("org.whatsapp", "Whatsapp", null),
                 InstalledApp("org.telegram.messenger", "Telegram", null),
             ),
-            allAppSettings = emptyList(),
+            allAppSettings = emptyMap(),
             randomVoice = false,
             ttsVolume = 0.8f,
             voicesCount = 1,
@@ -563,7 +563,7 @@ fun SettingsScreenPreviewInRussian() {
                 InstalledApp("org.whatsapp", "Whatsapp", null),
                 InstalledApp("org.telegram.messenger", "Telegram", null),
             ),
-            allAppSettings = emptyList(),
+            allAppSettings = emptyMap(),
             randomVoice = false,
             ttsVolume = 0.8f,
             voicesCount = 2,

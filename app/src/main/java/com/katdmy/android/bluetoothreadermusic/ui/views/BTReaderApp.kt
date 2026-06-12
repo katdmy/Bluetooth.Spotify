@@ -181,7 +181,7 @@ fun BTReaderApp(
                         ttsModeSelection = ttsModeSelection,
                         installedApps = state.value.installedApps,
                         addedApps = state.value.addedApps,
-                        allAppSettings = state.value.allAppSettings,
+                        allAppSettings = state.value.allAppSettings.associateBy { app -> app.packageName },
                         randomVoice = randomVoice,
                         ttsVolume = ttsVolume,
                         voicesCount = state.value.voicesCount,
