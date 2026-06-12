@@ -46,7 +46,8 @@
     <string name="random_voice_header">Читать разными голосами</string>
     <string name="lack_available_voices">Для работы функции необходимо не менее двух установленных голосов для вашего языка. Откройте настройки TTS и установите дополнительные языковые пакеты.</string>
     <string name="tts_volume">Громкость чтения</string>
-    <string name="open_tts_settings">Настройки TTS</string>
+    <string name="open_tts_settings">Системные настройки TTS</string>
+    <string name="tts_read_settings">Озвучивание уведомлений</string>
     <string name="use_logs">Запись событий</string>
     <string name="restart_tts">Перезапустить сервис чтения</string>
     <string name="privacy_policy_button">Политика конфиденциальности</string>
@@ -57,10 +58,27 @@
     <string name="log_messages">Служебные сообщения</string>
     <string name="log_messages_clear">Очистить</string>
     <string name="text_to_speech">Чтение уведомлений</string>
+
     <string name="app_choose_dialog_header">Выбор приложений</string>
     <string name="app_choose_dialog_search_hint">Поиск</string>
     <string name="app_choose_dialog_cancel_btn">Отмена</string>
     <string name="app_choose_dialog_add_btn">Добавить</string>
+
+    <string name="notification_settings_use_global">Использовать глобальную настройку приложения</string>
+    <string name="notification_settings_default">По умолчанию</string>
+    <string name="notification_audiofocus_header">Поведение звука</string>
+    <string name="notification_audiofocus_selector">Воспроизведение во время уведомления</string>
+    <string name="notification_audiofocus_duck">Уменьшить громкость</string>
+    <string name="notification_audiofocus_duck_description">Музыка станет тише во время озвучивания уведомления</string>
+    <string name="notification_audiofocus_exclusive">Остановить</string>
+    <string name="notification_audiofocus_exclusive_description">Музыка будет временно остановлена</string>
+    <string name="notification_parts_header">Формат уведомлений</string>
+    <string name="notification_parts_app">ПРИЛОЖЕНИЕ</string>
+    <string name="notification_parts_title">ЗАГОЛОВОК</string>
+    <string name="notification_parts_text">ТЕКСТ</string>
+    <string name="notification_parts_preview_header">Предпросмотр</string>
+    <string name="notification_parts_preview_title">Иван.</string>
+    <string name="notification_parts_preview_text">Привет, как дела?</string>
 
     <string name="stopTTS">Остановить чтение</string>
     <string name="startTTS">Начать чтение</string>
@@ -77,5 +95,5 @@
     <string name="bt_error">ошибка</string>
 
     <string name="privacy_policy_header">Политика конфиденц-ти</string>
-    <string name="privacy_policy_url">https://btreader.wuaze.com/privacypolicy_ru.htm</string>
+    <string name="privacy_policy_url">https://btreader.nichesite.org/privacypolicy_ru.htm</string>
 </resources>

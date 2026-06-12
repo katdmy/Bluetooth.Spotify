@@ -34,6 +34,11 @@ object Constants {
     val VOICE_NOTIFICATION_APPS = stringPreferencesKey("VOICE_NOTIFICATION_APPS")
 
     /*
+        APP_VOICE_SETTINGS - string containing serializable voice settings for every added app
+    */
+    val APP_VOICE_SETTINGS = stringPreferencesKey("APP_VOICE_SETTINGS")
+
+    /*
     RANDOM_VOICE - sets if TTS should use random voice instead of default one
     */
     val RANDOM_VOICE = booleanPreferencesKey("RANDOM_VOICE")
@@ -53,4 +58,13 @@ object Constants {
     */
     val SHOW_LOG = booleanPreferencesKey("SHOW_LOG")
 
+    /*
+    GLOBAL_AUDIOFOCUS_MODE - stores serializable value of global audiofocus mode
+    */
+    val GLOBAL_AUDIOFOCUS_MODE = stringPreferencesKey("GLOBAL_AUDIOFOCUS_MODE")
+
+    /*
+    GLOBAL_NOTIFICATION_PARTS - stores serializable value of added app voice settings
+    */
+    val GLOBAL_NOTIFICATION_PARTS = stringPreferencesKey("GLOBAL_NOTIFICATION_PARTS")
 }

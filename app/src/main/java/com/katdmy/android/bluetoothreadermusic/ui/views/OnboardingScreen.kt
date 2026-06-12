@@ -40,6 +40,7 @@ import com.katdmy.android.bluetoothreadermusic.ui.vm.MainViewModel
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
+import com.katdmy.android.bluetoothreadermusic.util.PackageHelper.getAppName
 import kotlinx.coroutines.launch
 
 @Composable
@@ -52,6 +53,7 @@ fun OnboardingScreen(
     onRequestBtPermission: () -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val pagesCount = 5
     val pagerState = rememberPagerState { pagesCount }
     val coroutineScope = rememberCoroutineScope()
@@ -80,7 +82,7 @@ fun OnboardingScreen(
                     title = stringResource(R.string.onboarding_read_notifications_title),
                     description = stringResource(
                         R.string.onboarding_read_notifications_description,
-                        getAppName()
+                        getAppName(context, context.packageName) ?: "BT Reader"
                     ),
                     imageRes = R.drawable.ic_read_notifications,
                     permissionGranted = permissionState.value.readNotifications,
@@ -239,13 +241,6 @@ fun OnboardingPage(
             }
         }
     }
-}
-
-@Composable
-fun getAppName(): String {
-    val context = LocalContext.current
-    val appInfo = context.packageManager.getApplicationInfo(context.packageName, 0)
-    return context.packageManager.getApplicationLabel(appInfo).toString()
 }
 
 @Preview(showBackground = true)

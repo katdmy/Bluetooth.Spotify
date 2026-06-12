@@ -27,6 +27,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.lifecycleScope
 import com.katdmy.android.bluetoothreadermusic.R
+import com.katdmy.android.bluetoothreadermusic.data.enums.AudioFocusMode
+import com.katdmy.android.bluetoothreadermusic.data.enums.NotificationPart
+import com.katdmy.android.bluetoothreadermusic.data.models.AppVoiceSettings
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
 import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
 import com.katdmy.android.bluetoothreadermusic.services.StatusService
@@ -35,8 +38,10 @@ import com.katdmy.android.bluetoothreadermusic.ui.vm.MainViewModel
 import com.katdmy.android.bluetoothreadermusic.util.BTConnectionState
 import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore
 import com.katdmy.android.bluetoothreadermusic.util.BluetoothConnectionChecker
+import com.katdmy.android.bluetoothreadermusic.util.Constants.APP_VOICE_SETTINGS
+import com.katdmy.android.bluetoothreadermusic.util.Constants.GLOBAL_AUDIOFOCUS_MODE
+import com.katdmy.android.bluetoothreadermusic.util.Constants.GLOBAL_NOTIFICATION_PARTS
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getList
-import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getString
 import com.katdmy.android.bluetoothreadermusic.util.Constants.ONBOARDING_COMPLETE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.SHOW_LOG
@@ -46,9 +51,13 @@ import kotlinx.coroutines.launch
 import java.util.Locale
 import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
 import com.katdmy.android.bluetoothreadermusic.util.DebugLog
+import com.katdmy.android.bluetoothreadermusic.util.PackageHelper.getAppIcon
+import com.katdmy.android.bluetoothreadermusic.util.PackageHelper.getAppName
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.serialization.json.Json
 
 class ComposeActivity : ComponentActivity() {
 
@@ -59,6 +68,7 @@ class ComposeActivity : ComponentActivity() {
     private lateinit var audioManager: AudioManager
     private lateinit var focusRequest: AudioFocusRequest
     private var currentVoiceName: String = ""
+    private val json = Json { ignoreUnknownKeys = true }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,14 +78,15 @@ class ComposeActivity : ComponentActivity() {
         initTTS()
 
         requestPermissionLauncher = registerForActivityResult(
-            ActivityResultContracts.RequestMultiplePermissions()) { permissionAndGrant ->
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    if (permissionAndGrant.keys.contains(Manifest.permission.POST_NOTIFICATIONS)) {
-                        viewModel.onSetPostNotificationPermission(
-                            permissionAndGrant[Manifest.permission.POST_NOTIFICATIONS] == true
-                        )
-                    }
+            ActivityResultContracts.RequestMultiplePermissions()
+        ) { permissionAndGrant ->
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                if (permissionAndGrant.keys.contains(Manifest.permission.POST_NOTIFICATIONS)) {
+                    viewModel.onSetPostNotificationPermission(
+                        permissionAndGrant[Manifest.permission.POST_NOTIFICATIONS] == true
+                    )
                 }
+            }
             if (permissionAndGrant.keys.contains(Manifest.permission.BLUETOOTH_CONNECT)) {
                 viewModel.onSetBTStatusPermission(permissionAndGrant[Manifest.permission.BLUETOOTH_CONNECT] == true)
                 if (permissionAndGrant[Manifest.permission.BLUETOOTH_CONNECT] == true)
@@ -87,7 +98,8 @@ class ComposeActivity : ComponentActivity() {
         startForegroundService(intent)
 
         setContent {
-            val isOnboardingComplete by BTRMDataStore.getValueFlow(ONBOARDING_COMPLETE, this).collectAsState(initial = false)
+            val isOnboardingComplete by BTRMDataStore.getValueFlow(ONBOARDING_COMPLETE, this)
+                .collectAsState(initial = false)
 
             BtReaderMusicTheme {
                 Surface(
@@ -101,6 +113,7 @@ class ComposeActivity : ComponentActivity() {
                             onClickReadTestText = ::onClickReadTestText,
                             onClickStopReading = ::onClickStopReading,
                             onClickDeleteApp = ::onClickDeleteApp,
+                            onClickSaveAppSettings = ::onClickSaveAppSettings,
                             onAddApps = ::onAddApps,
                             restartNotificationListener = ::restartNotificationListener,
                             onChangeUseTTS = ::onChangeUseTTS,
@@ -112,7 +125,9 @@ class ComposeActivity : ComponentActivity() {
                             onClickRequestBtPermission = ::onRequestBtPermission,
                             onChangeShowLog = ::onChangeShowLog,
                             onClickForceRestartTTS = ::onClickForceRestartTTS,
-                            onClickOpenTTSSettings = ::onClickOpenTTSSettings
+                            onClickOpenTTSSettings = ::onClickOpenTTSSettings,
+                            onChangeGlobalAudioFocusMode = ::onChangeGlobalAudioFocusMode,
+                            onChangeGlobalNotificationParts = ::onChangeGlobalNotificationParts
                         )
                     else
                         OnboardingScreen(
@@ -128,36 +143,112 @@ class ComposeActivity : ComponentActivity() {
         }
 
         lifecycleScope.launch {
-            BTRMDataStore.getValueFlow(VOICE_NOTIFICATION_APPS, this@ComposeActivity)
-                .map { it?.getList() ?: emptyList() }
-                .map { it.filter { packageName -> isAppInstalled(packageName) } }
-                .map { installedApps ->
+            launch {
+                // TODO("Migration to new installed app list with audio settings")
+                val oldAppString = BTRMDataStore.getValue(VOICE_NOTIFICATION_APPS, this@ComposeActivity)
+                val newAppString = BTRMDataStore.getValue(APP_VOICE_SETTINGS, this@ComposeActivity)
+                if (!oldAppString.isNullOrBlank() && newAppString.isNullOrBlank()) {
+                    val oldAppList = oldAppString.getList()
+                    val newApps: MutableList<AppVoiceSettings> = mutableListOf()
+                    for (oldApp in oldAppList) {
+                        newApps.add(AppVoiceSettings(oldApp))
+                    }
+                    val newAppsRaw = json.encodeToString(newApps)
+                    BTRMDataStore.saveValue(newAppsRaw, APP_VOICE_SETTINGS, this@ComposeActivity)
+                    BTRMDataStore.removeValue(VOICE_NOTIFICATION_APPS, this@ComposeActivity)
+                }
+                // TODO("Remove this block in new version")
+            }
+            launch {
+                BTRMDataStore.getValueFlow(APP_VOICE_SETTINGS, this@ComposeActivity)
+                    .map { raw ->
+                        if (raw != null)
+                            try {
+                                json.decodeFromString<List<AppVoiceSettings>>(raw)
+                            } catch (_: Exception) {
+                                emptyList()
+                            }
+                        else
+                            emptyList()
+                    }
+                    .distinctUntilChanged()
+                    .map { it.filter { appVoiceSettings -> isAppInstalled(appVoiceSettings.packageName) } }
+                    .map { allSettings ->
 
-                    withContext(Dispatchers.IO) {
+                        withContext(Dispatchers.IO) {
+                            val installedApps: MutableList<InstalledApp> = mutableListOf()
+                            for (appVoiceSettings in allSettings) {
+                                val name = getAppName(this@ComposeActivity, appVoiceSettings.packageName)
+                                val icon = getAppIcon(this@ComposeActivity, appVoiceSettings.packageName)
 
-                        installedApps.map { app ->
-                            val appInfo =
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                                    packageManager.getApplicationInfo(
-                                        app,
-                                        PackageManager.ApplicationInfoFlags.of(0)
+                                installedApps.add(
+                                    InstalledApp(
+                                        packageName = appVoiceSettings.packageName,
+                                        name = name,
+                                        icon = icon
                                     )
-                                } else {
-                                    packageManager.getApplicationInfo(app, 0)
-                                }
-                            val name = packageManager.getApplicationLabel(appInfo).toString()
-                            val icon = packageManager.getApplicationIcon(app)
-
-                            InstalledApp(
-                                packageName = app,
-                                name = name,
-                                icon = icon
-                            )
+                                )
+                            }
+                            Pair(allSettings, installedApps)
                         }
                     }
-                }
-                .collect(viewModel::onSetAddedApps)
+                    .collect { (appVoiceSettings, installedApps) ->
+                        viewModel.onSetAddedApps(installedApps)
+                        viewModel.onSetAllAppSettings(appVoiceSettings)
+                    }
             }
+            launch {
+                BTRMDataStore.getValueFlow(
+                        GLOBAL_AUDIOFOCUS_MODE,
+                        this@ComposeActivity
+                    )
+                    .map { raw ->
+                        try {
+                            raw?.let {
+                                json.decodeFromString<AudioFocusMode>(it)
+                            }
+                        } catch (_: Exception) {
+                            null
+                        } ?: AudioFocusMode.DUCK
+                    }
+                    .collect(viewModel::onSetGlobalAudioFocusMode)
+            }
+            launch {
+                BTRMDataStore.getValueFlow(
+                        GLOBAL_NOTIFICATION_PARTS,
+                        this@ComposeActivity
+                    )
+                    .map { raw ->
+                        try {
+                            raw?.let {
+                                json.decodeFromString<Set<NotificationPart>>(it)
+                            }
+                        } catch (_: Exception) {
+                            null
+                        } ?: setOf(
+                            NotificationPart.TITLE,
+                            NotificationPart.TEXT
+                        )
+                    }
+                    .collect(viewModel::onSetGlobalNotificationParts)
+            }
+            launch {
+                BTRMDataStore.getValueFlow(
+                        APP_VOICE_SETTINGS,
+                        this@ComposeActivity
+                    )
+                    .map { raw ->
+                        try {
+                            raw?.let {
+                                json.decodeFromString<List<AppVoiceSettings>>(it)
+                            }
+                        } catch (_: Exception) {
+                            null
+                        } ?: emptyList()
+                    }
+                    .collect(viewModel::onSetAllAppSettings)
+            }
+        }
     }
 
     override fun onDestroy() {
@@ -216,7 +307,7 @@ class ComposeActivity : ComponentActivity() {
 
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
         focusRequest =
-            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE).run {
+            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).run {
                 setAudioAttributes(AudioAttributes.Builder().run {
                     setUsage(AudioAttributes.USAGE_NOTIFICATION_EVENT)
                     setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
@@ -311,17 +402,54 @@ class ComposeActivity : ComponentActivity() {
 
     private fun onClickDeleteApp(deletingApp: String) {
         lifecycleScope.launch {
-            val addedAppsList = BTRMDataStore.getValue(VOICE_NOTIFICATION_APPS, this@ComposeActivity)?.getList() ?: listOf()
-            val newAddedAppsList = addedAppsList.filter { it != deletingApp }.getString()
-            BTRMDataStore.saveValue(newAddedAppsList, VOICE_NOTIFICATION_APPS, this@ComposeActivity)
+            val addedSettingsRaw = BTRMDataStore.getValue(APP_VOICE_SETTINGS, this@ComposeActivity) ?: ""
+            val allSettingsList =
+                try {
+                    json.decodeFromString<List<AppVoiceSettings>>(addedSettingsRaw)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            val listWithNewSettings = allSettingsList.filter { it.packageName != deletingApp }
+            val updatedSettingsRaw = json.encodeToString(listWithNewSettings)
+            BTRMDataStore.saveValue(updatedSettingsRaw, APP_VOICE_SETTINGS, this@ComposeActivity)
+        }
+    }
+
+    private fun onClickSaveAppSettings(appVoiceSettings: AppVoiceSettings) {
+        lifecycleScope.launch {
+            val allSettingsRaw = BTRMDataStore.getValue(APP_VOICE_SETTINGS, this@ComposeActivity) ?: ""
+            val allSettingsList =
+                try {
+                    json.decodeFromString<List<AppVoiceSettings>>(allSettingsRaw)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            val listWithNewSettings =
+                allSettingsList
+                    .filter { it.packageName != appVoiceSettings.packageName }
+                    .toMutableList()
+                    .apply {
+                        add(appVoiceSettings)
+                    }
+            val updatedSettingsRaw = json.encodeToString(listWithNewSettings)
+            BTRMDataStore.saveValue(updatedSettingsRaw, APP_VOICE_SETTINGS, this@ComposeActivity)
         }
     }
 
     private fun onAddApps(newApps: List<String>) {
         lifecycleScope.launch {
-            val addedAppsList = BTRMDataStore.getValue(VOICE_NOTIFICATION_APPS, this@ComposeActivity)?.getList() ?: listOf()
-            val newAddedAppsList = addedAppsList.plus(newApps).getString()
-            BTRMDataStore.saveValue(newAddedAppsList, VOICE_NOTIFICATION_APPS, this@ComposeActivity)
+            val raw = BTRMDataStore.getValue(APP_VOICE_SETTINGS, this@ComposeActivity) ?: ""
+            val list =
+                try {
+                    json.decodeFromString<List<AppVoiceSettings>>(raw)
+                } catch (_: Exception) {
+                    emptyList()
+                }
+            val newList = list + newApps.map {
+                packageName -> AppVoiceSettings(packageName)
+            }
+            val newRaw = json.encodeToString(newList)
+            BTRMDataStore.saveValue(newRaw, APP_VOICE_SETTINGS, this@ComposeActivity)
         }
     }
 
@@ -363,7 +491,7 @@ class ComposeActivity : ComponentActivity() {
                                 icon = pm.getApplicationIcon(appInfo)
                             )
                         }
-                        .sortedBy { it.name.lowercase() }
+                        .sortedBy { it.name?.lowercase() ?: it.packageName.lowercase() }
                 )
             }
         }
@@ -431,5 +559,19 @@ class ComposeActivity : ComponentActivity() {
         startActivity(Intent("com.android.settings.TTS_SETTINGS").apply {
             flags = Intent.FLAG_ACTIVITY_NEW_TASK
         })
+    }
+
+    private fun onChangeGlobalAudioFocusMode(newAudioFocusMode: AudioFocusMode) {
+        lifecycleScope.launch {
+            val raw = json.encodeToString(newAudioFocusMode)
+            BTRMDataStore.saveValue(raw, GLOBAL_AUDIOFOCUS_MODE, this@ComposeActivity)
+        }
+    }
+
+    private fun onChangeGlobalNotificationParts(newNotificationParts: Set<NotificationPart>) {
+        lifecycleScope.launch {
+            val raw = json.encodeToString(newNotificationParts)
+            BTRMDataStore.saveValue(raw, GLOBAL_NOTIFICATION_PARTS, this@ComposeActivity)
+        }
     }
 }

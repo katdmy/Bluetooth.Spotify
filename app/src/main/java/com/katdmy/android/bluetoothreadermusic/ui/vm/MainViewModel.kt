@@ -1,6 +1,9 @@
 package com.katdmy.android.bluetoothreadermusic.ui.vm
 
 import androidx.lifecycle.ViewModel
+import com.katdmy.android.bluetoothreadermusic.data.enums.AudioFocusMode
+import com.katdmy.android.bluetoothreadermusic.data.enums.NotificationPart
+import com.katdmy.android.bluetoothreadermusic.data.models.AppVoiceSettings
 import com.katdmy.android.bluetoothreadermusic.data.models.MainUiModel
 import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
 import com.katdmy.android.bluetoothreadermusic.data.models.GrantedPermissions
@@ -49,5 +52,17 @@ class MainViewModel : ViewModel() {
 
     fun onSetBTStatusPermission(newBTStatusPermission: Boolean) {
         _permissionState.update { it.copy(btStatus = newBTStatusPermission) }
+    }
+
+    fun onSetGlobalAudioFocusMode(newMode: AudioFocusMode) {
+        _uiState.update { it.copy(globalAudioFocusMode = newMode) }
+    }
+
+    fun onSetGlobalNotificationParts(newParts: Set<NotificationPart>) {
+        _uiState.update { it.copy(globalNotificationParts = newParts) }
+    }
+
+    fun onSetAllAppSettings(newSettings: List<AppVoiceSettings>) {
+        _uiState.update { it.copy(allAppSettings = newSettings) }
     }
 }

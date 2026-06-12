@@ -32,6 +32,7 @@ import kotlin.collections.forEach
 fun AddedAppColumn(
     addedApps: List<InstalledApp>,
     enabled: Boolean,
+    onClickOpenAppSettings: (String) -> Unit,
     onClickDeleteApp: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -44,6 +45,7 @@ fun AddedAppColumn(
             MessengerAppCard(
                 messengerApp = messengerApp,
                 enabled = enabled,
+                onClickOpenAppSettings = { onClickOpenAppSettings(messengerApp.packageName) },
                 onClickDelete = { onClickDeleteApp(messengerApp.packageName) },
             )
         }
@@ -54,6 +56,7 @@ fun AddedAppColumn(
 fun MessengerAppCard(
     messengerApp: InstalledApp,
     enabled: Boolean,
+    onClickOpenAppSettings: () -> Unit,
     onClickDelete: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -63,6 +66,7 @@ fun MessengerAppCard(
     ) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.Start,
             modifier = Modifier.fillMaxWidth()
         ) {
             Image(
@@ -74,7 +78,7 @@ fun MessengerAppCard(
                     .padding(6.dp)
             )
             Text(
-                text = messengerApp.name,
+                text = messengerApp.name ?: "Unknown app",
                 style = MaterialTheme.typography.bodyMedium,
                 textAlign = TextAlign.Start,
                 maxLines = 1,
@@ -85,9 +89,17 @@ fun MessengerAppCard(
                     .padding(start = 4.dp)
             )
             IconButton(
+                onClick = onClickOpenAppSettings,
+                enabled = enabled,
+            ) {
+                Icon(
+                    painter = painterResource(R.drawable.ic_settings),
+                    contentDescription = "App settings"
+                )
+            }
+            IconButton(
                 onClick = onClickDelete,
                 enabled = enabled,
-                modifier = Modifier.padding(end = 6.dp)
             ) {
                 Icon(
                     painter = painterResource(R.drawable.ic_delete),
@@ -108,6 +120,7 @@ fun AddedAppColumnPreview() {
                 InstalledApp("org.telegram.messenger", "Telegram", null),
             ),
             enabled = true,
+            onClickOpenAppSettings = {},
             onClickDeleteApp = {},
         )
     }

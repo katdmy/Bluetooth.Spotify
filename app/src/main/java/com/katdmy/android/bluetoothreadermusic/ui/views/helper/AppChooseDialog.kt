@@ -79,7 +79,7 @@ fun AppChooseDialog(
             installedApps
         } else {
             installedApps.filter {
-                it.name.contains(appSearchString, ignoreCase = true)
+                (it.name ?: it.packageName).contains(appSearchString, ignoreCase = true)
             }
         }
     }
@@ -154,7 +154,7 @@ fun AppChooseDialog(
                                     Spacer(modifier = Modifier.width(12.dp))
 
                                     Text(
-                                        text = app.name,
+                                        text = app.name ?: app.packageName,
                                         modifier = Modifier.weight(1f)
                                     )
 

@@ -40,4 +40,13 @@ object BTRMDataStore {
         context: Context
     ): T? =
         getValueFlow(key, context).first()
+
+
+    // TODO("Remove this block in new version")
+    internal suspend fun <T> removeValue(
+        key: Preferences.Key<T>,
+        context: Context
+    ) {
+        context.dataStore.edit { data -> data.remove(key) }
+    }
 }

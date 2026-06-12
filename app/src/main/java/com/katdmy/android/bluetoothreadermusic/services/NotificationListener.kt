@@ -18,7 +18,6 @@ import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.SERVICE_LAST_HEARTBEAT
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
-import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getList
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -29,16 +28,25 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import java.util.Locale
 import androidx.core.content.edit
+import com.katdmy.android.bluetoothreadermusic.data.enums.AudioFocusMode
+import com.katdmy.android.bluetoothreadermusic.data.enums.NotificationPart
+import com.katdmy.android.bluetoothreadermusic.data.models.AppVoiceSettings
 import com.katdmy.android.bluetoothreadermusic.data.models.NotificationFingerprint
 import com.katdmy.android.bluetoothreadermusic.receivers.BtBroadcastReceiver
 import com.katdmy.android.bluetoothreadermusic.util.BTConnectionState
+import com.katdmy.android.bluetoothreadermusic.util.Constants.APP_VOICE_SETTINGS
+import com.katdmy.android.bluetoothreadermusic.util.Constants.GLOBAL_AUDIOFOCUS_MODE
+import com.katdmy.android.bluetoothreadermusic.util.Constants.GLOBAL_NOTIFICATION_PARTS
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
-import com.katdmy.android.bluetoothreadermusic.util.Constants.VOICE_NOTIFICATION_APPS
 import com.katdmy.android.bluetoothreadermusic.util.DebugLog
+import com.katdmy.android.bluetoothreadermusic.util.PackageHelper.getAppName
 import com.katdmy.android.bluetoothreadermusic.util.ServiceHealthBus
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.serialization.json.Json
 import java.util.concurrent.atomic.AtomicInteger
 
 
@@ -48,7 +56,9 @@ class NotificationListener : NotificationListenerService() {
     private lateinit var listeningCommunicator: ListeningCommunicator
     private lateinit var tts: TextToSpeech
     private lateinit var audioManager: AudioManager
-    private lateinit var focusRequest: AudioFocusRequest
+    private lateinit var duckFocusRequest: AudioFocusRequest
+    private lateinit var exclusiveFocusRequest: AudioFocusRequest
+    private val json = Json { ignoreUnknownKeys = true }
     private val serviceScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var heartbeatJob: Job? = null
     private val ttsMutex = Mutex()
@@ -73,7 +83,14 @@ class NotificationListener : NotificationListenerService() {
     @Volatile
     private var randomVoiceCached: Boolean = false
     @Volatile
-    private var enabledAppSetCached: Set<String> = setOf()
+    private var settingsMapCached: Map<String, AppVoiceSettings> = emptyMap()
+    @Volatile
+    private var globalAudioFocusMode: AudioFocusMode = AudioFocusMode.DUCK
+    @Volatile
+    private var globalNotificationParts: Set<NotificationPart> = setOf(
+        NotificationPart.TITLE,
+        NotificationPart.TEXT
+    )
     @Volatile
     private var volumeCached: Float = 1f
 
@@ -102,8 +119,18 @@ class NotificationListener : NotificationListenerService() {
         }
 
         audioManager = getSystemService(AUDIO_SERVICE) as AudioManager
-        focusRequest =
+        duckFocusRequest =
             AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK).run {
+                setAudioAttributes(AudioAttributes.Builder().run {
+                    setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+                    setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                    build()
+                })
+                build()
+            }
+
+        exclusiveFocusRequest =
+            AudioFocusRequest.Builder(AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE).run {
                 setAudioAttributes(AudioAttributes.Builder().run {
                     setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
                     setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
@@ -139,9 +166,20 @@ class NotificationListener : NotificationListenerService() {
                     }
             }
             launch {
-                BTRMDataStore.getValueFlow(VOICE_NOTIFICATION_APPS, this@NotificationListener)
-                    .collectLatest { enabledAppsList ->
-                        enabledAppSetCached = enabledAppsList?.getList()?.toSet() ?: setOf()
+                BTRMDataStore.getValueFlow(APP_VOICE_SETTINGS, this@NotificationListener)
+                    .map { raw ->
+                        if (raw == null)
+                            emptyList()
+                        else
+                            try {
+                                json.decodeFromString<List<AppVoiceSettings>>(raw)
+                            } catch (_: Exception) {
+                                emptyList()
+                            }
+                    }
+                    .distinctUntilChanged()
+                    .collect { list ->
+                        settingsMapCached = list.associateBy { it.packageName }
                     }
             }
             launch {
@@ -160,6 +198,41 @@ class NotificationListener : NotificationListenerService() {
 
                     delay(10_000L)
                 }
+            }
+            launch {
+                BTRMDataStore.getValueFlow(
+                    GLOBAL_AUDIOFOCUS_MODE,
+                    this@NotificationListener
+                )
+                    .map { raw ->
+                        try {
+                            raw?.let {
+                                json.decodeFromString<AudioFocusMode>(it)
+                            }
+                        } catch (_: Exception) {
+                            null
+                        } ?: AudioFocusMode.DUCK
+                    }
+                    .collect { globalAudioFocusMode = it }
+            }
+            launch {
+                BTRMDataStore.getValueFlow(
+                    GLOBAL_NOTIFICATION_PARTS,
+                    this@NotificationListener
+                )
+                    .map { raw ->
+                        try {
+                            raw?.let {
+                                json.decodeFromString<Set<NotificationPart>>(it)
+                            }
+                        } catch (_: Exception) {
+                            null
+                        } ?: setOf(
+                            NotificationPart.TITLE,
+                            NotificationPart.TEXT
+                        )
+                    }
+                    .collect { globalNotificationParts = it }
             }
         }
 
@@ -209,8 +282,15 @@ class NotificationListener : NotificationListenerService() {
         }
     }
 
+    private fun getFocusRequest(mode: AudioFocusMode): AudioFocusRequest =
+        when(mode) {
+            AudioFocusMode.DUCK -> duckFocusRequest
+            AudioFocusMode.EXCLUSIVE -> exclusiveFocusRequest
+        }
+
     private fun ttsInitialized() {
-        audioManager.abandonAudioFocusRequest(focusRequest)
+        audioManager.abandonAudioFocusRequest(duckFocusRequest)
+        audioManager.abandonAudioFocusRequest(exclusiveFocusRequest)
         queueCounter.set(0)
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String) {
@@ -219,7 +299,8 @@ class NotificationListener : NotificationListenerService() {
 
             override fun onDone(utteranceId: String) {
                 lastTtsStartTime = System.currentTimeMillis()
-                audioManager.abandonAudioFocusRequest(focusRequest)
+                audioManager.abandonAudioFocusRequest(duckFocusRequest)
+                audioManager.abandonAudioFocusRequest(exclusiveFocusRequest)
                 queueCounter.updateAndGet {
                     maxOf(0, it - 1)
                 }
@@ -227,7 +308,8 @@ class NotificationListener : NotificationListenerService() {
 
             @Deprecated("Deprecated in Java")
             override fun onError(utteranceId: String) {
-                audioManager.abandonAudioFocusRequest(focusRequest)
+                audioManager.abandonAudioFocusRequest(duckFocusRequest)
+                audioManager.abandonAudioFocusRequest(exclusiveFocusRequest)
                 queueCounter.updateAndGet {
                     maxOf(0, it - 1)
                 }
@@ -319,7 +401,7 @@ class NotificationListener : NotificationListenerService() {
     }
 
 
-    override fun onNotificationPosted(sbn: StatusBarNotification) {
+    /*override fun onNotificationPosted(sbn: StatusBarNotification) {
 
         val packageName = sbn.packageName
         val sortKey = sbn.notification?.sortKey
@@ -373,7 +455,7 @@ class NotificationListener : NotificationListenerService() {
                     }
 
                     1 -> {
-                        if (packageName in enabledAppSetCached) {
+                        if (settingsMapCached.containsKey(packageName)) {
                             when (packageName) {
                                 "com.whatsapp" -> if (sortKey?.toInt() == 1)
                                     readTTS(textToRead)
@@ -392,11 +474,134 @@ class NotificationListener : NotificationListenerService() {
                 }
             }
         }
+    }*/
+
+    override fun onNotificationPosted(sbn: StatusBarNotification) {
+
+        val packageName = sbn.packageName
+        val sortKey = sbn.notification?.sortKey
+        val key = sbn.key
+        val extras = sbn.notification?.extras
+        val aTitle = extras?.getCharSequence("android.title")
+        val aText = extras?.getCharSequence("android.text")
+
+        val bundles = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            extras?.getParcelableArray(
+                "android.messages",
+                Bundle::class.java
+            )
+        } else {
+            @Suppress("DEPRECATION")
+            extras?.getParcelableArray("android.messages")
+        }
+        var pSender = ""
+        var pText = ""
+
+        if (bundles != null) {
+            val msg = Notification.MessagingStyle.Message
+                .getMessagesFromBundleArray(bundles).last()
+
+            pText = msg.text.toString()
+            @Suppress("DEPRECATION")
+            pSender = (
+                    msg.senderPerson?.name
+                        ?: msg.sender
+                        ?: pSender
+                    ).toString()
+        }
+
+        val title = pSender.ifBlank { aTitle }.toString()
+        val text = pText.ifBlank { aText }.toString()
+
+        if (useTTSCached && title.isNotBlank() && text.isNotBlank() && key != null) {
+
+            when (ttsModeCached) {
+                0 -> {
+                    if (packageName != applicationContext.packageName) {
+                        val textToRead = getTextToRead(
+                            globalNotificationParts,
+                            getAppName(this, packageName) ?: packageName,
+                            title,
+                            text
+                        )
+
+                        if (textToRead.isBlank()) return
+
+                        val fingerprint = NotificationFingerprint(key, textToRead)
+                        if (!recent.contains(fingerprint)) {
+                            recent.add(fingerprint)
+                            if (recent.size > 50) {
+                                recent.remove(recent.first())
+                            }
+                        } else return
+
+                        readTTS(textToRead, globalAudioFocusMode)
+                    }
+                }
+
+                1 -> {
+                    if (settingsMapCached.containsKey(packageName)) {
+                        val textToRead = getTextToRead(
+                            settingsMapCached[packageName]?.enabledParts,
+                            getAppName(this, packageName) ?: packageName,
+                            title,
+                            text
+                        )
+                        if (textToRead.isBlank()) return
+
+                        val fingerprint = NotificationFingerprint(key, textToRead)
+                        if (!recent.contains(fingerprint)) {
+                            recent.add(fingerprint)
+                            if (recent.size > 50) {
+                                recent.remove(recent.first())
+                            }
+                        } else return
+
+                        val audioFocusMode = settingsMapCached[packageName]?.audioFocusMode
+
+                        when (packageName) {
+                            "com.whatsapp" -> if (sortKey?.toInt() == 1) {
+                                readTTS(textToRead, audioFocusMode)
+                            }
+                            "com.instagram.android" -> if (key.contains("|direct|"))
+                                readTTS(textToRead, audioFocusMode)
+
+                            "org.telegram.messenger" -> readTTS(textToRead, audioFocusMode)
+
+                            else -> readTTS(textToRead, audioFocusMode)
+                        }
+                    }
+                }
+
+                else -> {}
+            }
+        }
     }
 
-    private fun readTTS(text: String) {
+
+    private fun getTextToRead(
+        parts: Set<NotificationPart>?,
+        app: String,
+        title: String,
+        text: String
+    ): String {
+        if (parts == null)
+            return ""
+
+        val chunks = mutableListOf<String>()
+        if (NotificationPart.APP in parts)
+            chunks += app
+        if (NotificationPart.TITLE in parts)
+            chunks += title
+        if (NotificationPart.TEXT in parts)
+            chunks += text
+
+        return chunks.joinToString(". ")
+    }
+
+    private fun readTTS(text: String, audioFocusMode: AudioFocusMode?) {
         if (!randomVoiceCached || validRandomVoices.isEmpty()) {
-            ttsTrySpeak(text)
+            ttsTrySpeak(text, audioFocusMode)
             return
         }
 
@@ -418,15 +623,18 @@ class NotificationListener : NotificationListenerService() {
             }
         }
 
-        ttsTrySpeak(text)
+        ttsTrySpeak(text, audioFocusMode)
     }
 
-    private fun ttsTrySpeak(text: String) {
+    private fun ttsTrySpeak(text: String, audioFocusMode: AudioFocusMode?) {
         serviceScope.launch {
             ttsMutex.withLock {
                 if (!ttsReady)
                     return@withLock
 
+                val focusRequest = getFocusRequest(
+                    audioFocusMode ?: globalAudioFocusMode
+                )
                 audioManager.requestAudioFocus(focusRequest)
 
                 val params = Bundle().apply {

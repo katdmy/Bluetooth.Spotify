@@ -13,6 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -20,10 +21,13 @@ import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -35,29 +39,41 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.data.ServiceStatus
+import com.katdmy.android.bluetoothreadermusic.data.enums.AudioFocusMode
+import com.katdmy.android.bluetoothreadermusic.data.enums.NotificationPart
+import com.katdmy.android.bluetoothreadermusic.data.models.AppVoiceSettings
 import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.AppChooseDialog
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.BtReaderButton
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.AddedAppColumn
+import com.katdmy.android.bluetoothreadermusic.ui.views.helper.AppVoiceSettingsBottomSheet
+import com.katdmy.android.bluetoothreadermusic.ui.views.helper.AudioFocusModeSelector
+import com.katdmy.android.bluetoothreadermusic.ui.views.helper.NotificationPartsSelector
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.ServiceHealthIndicator
+import kotlinx.coroutines.launch
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SettingsScreen(
     serviceHealth: ServiceStatus,
     ttsModeSelection: Int?,
     installedApps: List<InstalledApp>,
     addedApps: List<InstalledApp>,
+    allAppSettings: List<AppVoiceSettings>,
     randomVoice: Boolean?,
     ttsVolume: Float?,
     voicesCount: Int,
     postNotificationPermissionGranted: Boolean,
     readNotificationsPermissionGranted: Boolean,
+    audioFocusMode: AudioFocusMode,
+    enabledParts: Set<NotificationPart>,
     btStatusPermissionGranted: Boolean,
     btStatus: String,
     showLog: Boolean,
     onGetInstalledLaunchableApps: () -> Unit,
     onSetTtsMode: (Int) -> Unit,
+    onClickSaveAppSettings: (AppVoiceSettings) -> Unit,
     onClickDeleteApp: (String) -> Unit,
     onClickAddApp: (List<String>) -> Unit,
     onSetRandomVoice: (Boolean) -> Unit,
@@ -65,6 +81,8 @@ fun SettingsScreen(
     openNotificationSettings: () -> Unit,
     onClickRequestReadNotificationsPermission: () -> Unit,
     onClickRequestPostNotificationPermission: () -> Unit,
+    onChangeGlobalAudioFocusMode: (AudioFocusMode) -> Unit,
+    onChangeGlobalNotificationParts: (Set<NotificationPart>) -> Unit,
     onClickRequestBtPermission: () -> Unit,
     onClickOpenTTSSettings: () -> Unit,
     onChangeShowLog: (Boolean) -> Unit,
@@ -76,6 +94,12 @@ fun SettingsScreen(
         stringResource(R.string.mode_switch_allapps),
         stringResource(R.string.mode_switch_selected)
     )
+
+    val sheetState = rememberModalBottomSheetState()
+    val scope = rememberCoroutineScope()
+    var appToOpenSettings by remember { mutableStateOf<String?>(null) }
+    var closeAppSettings by remember { mutableStateOf(false) }
+
     var openAppChooseDialog by remember { mutableStateOf(false) }
 
     // Используем фон, чтобы разделить карточки и создать ощущение глубины
@@ -213,6 +237,9 @@ fun SettingsScreen(
                     AddedAppColumn(
                         addedApps = addedApps,
                         enabled = ttsModeSelection == 1,
+                        onClickOpenAppSettings = { packageName ->
+                            appToOpenSettings = packageName
+                        },
                         onClickDeleteApp = onClickDeleteApp,
                         modifier = Modifier.padding(top = 8.dp)
                     )
@@ -315,6 +342,44 @@ fun SettingsScreen(
             }
         }
 
+        // Глобальные настройки чтения уведомлений
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            elevation = CardDefaults.elevatedCardElevation(4.dp)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(16.dp)
+                    .fillMaxWidth()
+            ) {
+                Text(
+                    text = stringResource(R.string.tts_read_settings),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                AudioFocusModeSelector(
+                    isGlobal = true,
+                    useGlobal = false,
+                    selected = audioFocusMode,
+                    onChangeUseGlobal = {},
+                    onSelect = onChangeGlobalAudioFocusMode
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                NotificationPartsSelector(
+                    isGlobal = true,
+                    useGlobal = false,
+                    selectedParts = enabledParts,
+                    appName = "Test App",
+                    onChangeUseGlobal = {},
+                    onChange = onChangeGlobalNotificationParts
+                )
+            }
+        }
+
         // Секция для статуса Bluetooth
         Card(
             modifier = Modifier.fillMaxWidth(),
@@ -414,6 +479,32 @@ fun SettingsScreen(
             onDismiss = { openAppChooseDialog = false }
         )
     }
+
+    LaunchedEffect(closeAppSettings) {
+        if (closeAppSettings) {
+            scope
+                .launch { sheetState.hide() }
+                .invokeOnCompletion {
+                    if (!sheetState.isVisible) {
+                        appToOpenSettings = null
+                        closeAppSettings = false
+                    }
+                }
+        }
+    }
+    if (appToOpenSettings != null) {
+        val onCloseAppSettings = { closeAppSettings = true }
+        val settings = allAppSettings
+            .firstOrNull { it.packageName == appToOpenSettings }
+            ?: AppVoiceSettings(packageName = appToOpenSettings!!)
+
+        AppVoiceSettingsBottomSheet(
+            settings = settings,
+            sheetState = sheetState,
+            onClickSaveAppSettings = onClickSaveAppSettings,
+            onCloseAppSettings = onCloseAppSettings
+        )
+    }
 }
 
 @Preview(showBackground = true)
@@ -428,16 +519,20 @@ fun SettingsScreenPreview() {
                 InstalledApp("org.whatsapp", "Whatsapp", null),
                 InstalledApp("org.telegram.messenger", "Telegram", null),
             ),
+            allAppSettings = emptyList(),
             randomVoice = false,
             ttsVolume = 0.8f,
             voicesCount = 1,
             postNotificationPermissionGranted = false,
             readNotificationsPermissionGranted = false,
+            audioFocusMode = AudioFocusMode.DUCK,
+            enabledParts = setOf(NotificationPart.TITLE, NotificationPart.TEXT),
             btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
             showLog = false,
             onGetInstalledLaunchableApps = {},
             onSetTtsMode = {},
+            onClickSaveAppSettings = {},
             onClickDeleteApp = {},
             onClickAddApp = {},
             onSetRandomVoice = {},
@@ -446,6 +541,8 @@ fun SettingsScreenPreview() {
             openNotificationSettings = {},
             onClickRequestReadNotificationsPermission = {},
             onClickRequestPostNotificationPermission = {},
+            onChangeGlobalAudioFocusMode = {},
+            onChangeGlobalNotificationParts = {},
             onClickRequestBtPermission = {},
             onChangeShowLog = {},
             onClickForceRestartTTS = {},
@@ -466,6 +563,7 @@ fun SettingsScreenPreviewInRussian() {
                 InstalledApp("org.whatsapp", "Whatsapp", null),
                 InstalledApp("org.telegram.messenger", "Telegram", null),
             ),
+            allAppSettings = emptyList(),
             randomVoice = false,
             ttsVolume = 0.8f,
             voicesCount = 2,
@@ -474,16 +572,21 @@ fun SettingsScreenPreviewInRussian() {
             showLog = false,
             onGetInstalledLaunchableApps = {},
             onSetTtsMode = {},
+            onClickSaveAppSettings = {},
             onClickDeleteApp = {},
             onClickAddApp = {},
             postNotificationPermissionGranted = false,
             readNotificationsPermissionGranted = false,
+            audioFocusMode = AudioFocusMode.DUCK,
+            enabledParts = setOf(NotificationPart.TITLE, NotificationPart.TEXT),
             onSetRandomVoice = {},
             onSetTtsVolume = {},
             onClickOpenTTSSettings = {},
             openNotificationSettings = {},
             onClickRequestReadNotificationsPermission = {},
             onClickRequestPostNotificationPermission = {},
+            onChangeGlobalAudioFocusMode = {},
+            onChangeGlobalNotificationParts = {},
             onClickRequestBtPermission = {},
             onChangeShowLog = {},
             onClickForceRestartTTS = {},

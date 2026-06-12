@@ -37,6 +37,9 @@ import androidx.compose.ui.res.stringResource
 import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.data.Navigation
 import com.katdmy.android.bluetoothreadermusic.data.ServiceStatus
+import com.katdmy.android.bluetoothreadermusic.data.enums.AudioFocusMode
+import com.katdmy.android.bluetoothreadermusic.data.enums.NotificationPart
+import com.katdmy.android.bluetoothreadermusic.data.models.AppVoiceSettings
 import com.katdmy.android.bluetoothreadermusic.services.StatusService
 import com.katdmy.android.bluetoothreadermusic.ui.vm.MainViewModel
 import com.katdmy.android.bluetoothreadermusic.util.BTConnectionState
@@ -58,6 +61,7 @@ fun BTReaderApp(
     restartNotificationListener: () -> Unit,
     onClickStopReading: () -> Unit,
     onClickDeleteApp: (String) -> Unit,
+    onClickSaveAppSettings: (AppVoiceSettings) -> Unit,
     onAddApps: (List<String>) -> Unit,
     onChangeUseTTS: (Boolean) -> Unit,
     onSetTtsMode: (Int) -> Unit,
@@ -69,6 +73,8 @@ fun BTReaderApp(
     onChangeShowLog: (Boolean) -> Unit,
     onClickForceRestartTTS: () -> Unit,
     onClickOpenTTSSettings: () -> Unit,
+    onChangeGlobalAudioFocusMode: (AudioFocusMode) -> Unit,
+    onChangeGlobalNotificationParts: (Set<NotificationPart>) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val scope = rememberCoroutineScope()
@@ -175,16 +181,20 @@ fun BTReaderApp(
                         ttsModeSelection = ttsModeSelection,
                         installedApps = state.value.installedApps,
                         addedApps = state.value.addedApps,
+                        allAppSettings = state.value.allAppSettings,
                         randomVoice = randomVoice,
                         ttsVolume = ttsVolume,
                         voicesCount = state.value.voicesCount,
                         postNotificationPermissionGranted = permissions.value.postNotification,
                         readNotificationsPermissionGranted = permissions.value.readNotifications,
+                        audioFocusMode = state.value.globalAudioFocusMode,
+                        enabledParts = state.value.globalNotificationParts,
                         btStatusPermissionGranted = permissions.value.btStatus,
                         btStatus = btState,
                         showLog = showLog == true,
                         onGetInstalledLaunchableApps = onGetInstalledLaunchableApps,
                         onSetTtsMode = onSetTtsMode,
+                        onClickSaveAppSettings = onClickSaveAppSettings,
                         onClickDeleteApp = onClickDeleteApp,
                         onClickAddApp = onAddApps,
                         onSetRandomVoice = onSetRandomVoice,
@@ -193,6 +203,8 @@ fun BTReaderApp(
                         openNotificationSettings = restartNotificationListener,
                         onClickRequestReadNotificationsPermission = onClickRequestReadNotificationsPermission,
                         onClickRequestPostNotificationPermission = onClickRequestPostNotificationPermission,
+                        onChangeGlobalAudioFocusMode = onChangeGlobalAudioFocusMode,
+                        onChangeGlobalNotificationParts = onChangeGlobalNotificationParts,
                         onClickRequestBtPermission = onClickRequestBtPermission,
                         onChangeShowLog = { newShowLog ->
                             DebugLog.clear()
