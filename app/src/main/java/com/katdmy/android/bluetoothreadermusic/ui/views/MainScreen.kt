@@ -85,6 +85,7 @@ fun MainScreen(
                             Image(
                                 painter = painterResource(R.drawable.ic_clear),
                                 contentDescription = null,
+                                colorFilter = ColorFilter.tint(MaterialTheme.colorScheme.secondary),
                                 modifier = Modifier.clickable { onTestTextToSpeechChange("") }
                             )
                         },
@@ -125,7 +126,8 @@ fun MainScreen(
                             modifier = Modifier.padding(bottom = 12.dp)
                         )
                         LazyColumn(modifier = Modifier
-                            .fillMaxWidth().weight(1f)
+                            .fillMaxWidth()
+                            .weight(1f)
                         ) {
                             items(messages) { message ->
                                 Text(text = message)
