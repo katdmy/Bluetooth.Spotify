@@ -51,6 +51,7 @@ import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import kotlinx.coroutines.delay
+import kotlin.time.Duration.Companion.milliseconds
 
 @Composable
 fun AppChooseDialog(
@@ -71,7 +72,7 @@ fun AppChooseDialog(
     }
 
     LaunchedEffect(appSearchString) {
-        delay(300)
+        delay(300.milliseconds)
         debouncedSearch = appSearchString
     }
 

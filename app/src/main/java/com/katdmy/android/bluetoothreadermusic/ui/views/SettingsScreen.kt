@@ -95,7 +95,7 @@ fun SettingsScreen(
         stringResource(R.string.mode_switch_selected)
     )
 
-    val sheetState = rememberModalBottomSheetState()
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
     var appToOpenSettings by remember { mutableStateOf<String?>(null) }
     var closeAppSettings by remember { mutableStateOf(false) }
