@@ -27,23 +27,10 @@ object PackageHelper {
         }
     }
 
-    fun getAppIcon(context: Context, packageName: String): Drawable? {
+    fun getAppIcon(context: Context, packageName: String): Drawable {
         val appContext = context.applicationContext
         val packageManager = appContext.packageManager
 
-        return try {
-            val appInfo = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                packageManager.getApplicationInfo(
-                    packageName,
-                    PackageManager.ApplicationInfoFlags.of(0)
-                )
-            } else {
-                packageManager.getApplicationInfo(packageName, 0)
-            }
-            packageManager.getApplicationIcon(packageName)
-
-        } catch(_: PackageManager.NameNotFoundException) {
-            null
-        }
+        return packageManager.getApplicationIcon(packageName)
     }
 }
