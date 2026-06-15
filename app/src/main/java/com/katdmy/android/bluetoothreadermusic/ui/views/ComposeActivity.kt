@@ -211,7 +211,26 @@ class ComposeActivity : ComponentActivity() {
                             null
                         } ?: AudioFocusMode.DUCK
                     }
-                    .collect(viewModel::onSetGlobalAudioFocusMode)
+                    .collect { mode ->
+                        viewModel.onSetGlobalAudioFocusMode(mode)
+
+                        tts.stop()
+
+                        val newAudioFocusMode = when(mode) {
+                            AudioFocusMode.DUCK -> AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_MAY_DUCK
+                            AudioFocusMode.EXCLUSIVE -> AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
+                        }
+                        focusRequest =
+                            AudioFocusRequest.Builder(newAudioFocusMode).run {
+                                setAudioAttributes(AudioAttributes.Builder().run {
+                                    setUsage(AudioAttributes.USAGE_ASSISTANCE_NAVIGATION_GUIDANCE)
+                                    setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
+                                    build()
+                                })
+                                build()
+                            }
+                        ttsInitialized()
+                    }
             }
             launch {
                 BTRMDataStore.getValueFlow(
@@ -320,7 +339,6 @@ class ComposeActivity : ComponentActivity() {
     private fun ttsInitialized() {
         tts.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String) {
-                audioManager.requestAudioFocus(focusRequest)
                 viewModel.onSetReadingTestText(true)
             }
 
@@ -380,6 +398,9 @@ class ComposeActivity : ComponentActivity() {
                 putFloat(TextToSpeech.Engine.KEY_PARAM_VOLUME, volume*volume)
             }
             val utteranceId = System.nanoTime().toString()
+
+            audioManager.requestAudioFocus(focusRequest)
+
             tts.speak(text, TextToSpeech.QUEUE_ADD, params, utteranceId)
         }
     }
