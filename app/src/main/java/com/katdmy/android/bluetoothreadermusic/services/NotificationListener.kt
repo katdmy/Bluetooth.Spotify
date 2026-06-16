@@ -589,22 +589,8 @@ class NotificationListener : NotificationListenerService() {
 
                 when (result) {
                     TextToSpeech.ERROR -> {
+                        DebugLog.add("TextToSpeech engine error, restarting it and skipping notification.")
                         restartTTSInternal()
-
-                        serviceScope.launch {
-                            delay(3000.milliseconds)
-
-                            ttsMutex.withLock {
-                                try {
-                                    tts.speak(
-                                        text,
-                                        TextToSpeech.QUEUE_ADD,
-                                        params,
-                                        utteranceId
-                                    )
-                                } catch (_: Exception) {}
-                            }
-                        }
                     }
 
                     TextToSpeech.SUCCESS -> {
