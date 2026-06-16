@@ -19,8 +19,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import com.katdmy.android.bluetoothreadermusic.R
 import com.katdmy.android.bluetoothreadermusic.data.enums.AudioFocusMode
 import com.katdmy.android.bluetoothreadermusic.data.enums.NotificationPart
 import com.katdmy.android.bluetoothreadermusic.data.models.AppVoiceSettings
@@ -92,7 +94,7 @@ fun AppVoiceSettingsBottomSheet(
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text("Сохранить")
+                Text(stringResource(R.string.notification_settings_save))
             }
 
             Spacer(modifier = Modifier.height(12.dp))

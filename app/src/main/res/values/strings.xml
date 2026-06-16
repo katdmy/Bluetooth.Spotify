@@ -65,6 +65,7 @@
 
     <string name="notification_settings_use_global">Use global app setting</string>
     <string name="notification_settings_default">Use default</string>
+    <string name="notification_settings_save">Save</string>
     <string name="notification_audiofocus_header">Playback behavior</string>
     <string name="notification_audiofocus_selector">Currently playing app behavior</string>
     <string name="notification_audiofocus_duck">Reduce volume</string>

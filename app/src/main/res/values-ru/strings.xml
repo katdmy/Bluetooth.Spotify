@@ -66,6 +66,7 @@
 
     <string name="notification_settings_use_global">Использовать глобальную настройку приложения</string>
     <string name="notification_settings_default">По умолчанию</string>
+    <string name="notification_settings_save">Сохранить</string>
     <string name="notification_audiofocus_header">Поведение звука</string>
     <string name="notification_audiofocus_selector">Воспроизведение во время уведомления</string>
     <string name="notification_audiofocus_duck">Уменьшить громкость</string>
