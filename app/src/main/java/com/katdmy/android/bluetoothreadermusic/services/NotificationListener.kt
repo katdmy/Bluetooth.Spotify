@@ -438,67 +438,75 @@ class NotificationListener : NotificationListenerService() {
         val title = pSender.ifBlank { aTitle }.toString()
         val text = pText.ifBlank { aText }.toString()
 
-        if (useTTSCached && title.isNotBlank() && text.isNotBlank() && key != null) {
-            when (ttsModeCached) {
-                0 -> {
-                    if (packageName != applicationContext.packageName) {
-                        val textToRead = getTextToRead(
-                            globalNotificationParts,
-                            getAppName(this, packageName) ?: packageName,
-                            title,
-                            text
-                        )
+        DebugLog.add(
+            "pkg=$packageName " +
+            "key=$key " +
+            "title=$title " +
+            "text=$text"
+        )
 
-                        if (textToRead.isBlank()) return
+        if (!useTTSCached || key == null)
+            return
 
-                        val fingerprint = NotificationFingerprint(key, textToRead)
-                        if (!recent.contains(fingerprint)) {
-                            recent.add(fingerprint)
-                            if (recent.size > 50) {
-                                recent.remove(recent.first())
-                            }
-                        } else return
+        when (ttsModeCached) {
+            0 -> {
+                if (packageName != applicationContext.packageName) {
+                    val textToRead = getTextToRead(
+                        globalNotificationParts,
+                        getAppName(this, packageName) ?: packageName,
+                        title,
+                        text
+                    )
 
-                        readTTS(textToRead, globalAudioFocusMode)
-                    }
-                }
+                    if (textToRead.isBlank()) return
 
-                1 -> {
-                    if (settingsMapCached.containsKey(packageName)) {
-                        val textToRead = getTextToRead(
-                            settingsMapCached[packageName]?.enabledParts ?: globalNotificationParts,
-                            getAppName(this, packageName) ?: packageName,
-                            title,
-                            text
-                        )
-                        if (textToRead.isBlank()) return
-
-                        val fingerprint = NotificationFingerprint(key, textToRead)
-                        if (!recent.contains(fingerprint)) {
-                            recent.add(fingerprint)
-                            if (recent.size > 50) {
-                                recent.remove(recent.first())
-                            }
-                        } else return
-
-                        val audioFocusMode = settingsMapCached[packageName]?.audioFocusMode
-
-                        when (packageName) {
-                            "com.whatsapp" -> if (sortKey?.toInt() == 1) {
-                                readTTS(textToRead, audioFocusMode)
-                            }
-                            "com.instagram.android" -> if (key.contains("|direct|"))
-                                readTTS(textToRead, audioFocusMode)
-
-                            "org.telegram.messenger" -> readTTS(textToRead, audioFocusMode)
-
-                            else -> readTTS(textToRead, audioFocusMode)
+                    val fingerprint = NotificationFingerprint(key, "$title|$text")
+                    if (!recent.contains(fingerprint)) {
+                        recent.add(fingerprint)
+                        if (recent.size > 50) {
+                            recent.remove(recent.first())
                         }
+                    } else return
+
+                    readTTS(textToRead, globalAudioFocusMode)
+                }
+            }
+
+            1 -> {
+                if (settingsMapCached.containsKey(packageName)) {
+                    val textToRead = getTextToRead(
+                        settingsMapCached[packageName]?.enabledParts ?: globalNotificationParts,
+                        getAppName(this, packageName) ?: packageName,
+                        title,
+                        text
+                    )
+                    if (textToRead.isBlank()) return
+
+                    val fingerprint = NotificationFingerprint(key, "$title|$text")
+                    if (!recent.contains(fingerprint)) {
+                        recent.add(fingerprint)
+                        if (recent.size > 50) {
+                            recent.remove(recent.first())
+                        }
+                    } else return
+
+                    val audioFocusMode = settingsMapCached[packageName]?.audioFocusMode
+
+                    when (packageName) {
+                        "com.whatsapp" -> if (sortKey?.toInt() == 1) {
+                            readTTS(textToRead, audioFocusMode)
+                        }
+                        "com.instagram.android" -> if (key.contains("|direct|"))
+                            readTTS(textToRead, audioFocusMode)
+
+                        "org.telegram.messenger" -> readTTS(textToRead, audioFocusMode)
+
+                        else -> readTTS(textToRead, audioFocusMode)
                     }
                 }
-
-                else -> {}
             }
+
+            else -> {}
         }
     }
 
