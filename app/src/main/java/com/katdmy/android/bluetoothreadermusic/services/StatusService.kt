@@ -33,6 +33,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlin.time.Duration.Companion.milliseconds
 
 class StatusService: Service() {
 
@@ -50,6 +51,7 @@ class StatusService: Service() {
 
     override fun onCreate() {
         super.onCreate()
+        DebugLog.add("StatusService.onCreate")
 
         val useTtsFlow = BTRMDataStore
             .getValueFlow(USE_TTS_SF, this)
@@ -85,11 +87,13 @@ class StatusService: Service() {
         startWatchdog()
     }
 
-    override fun onStartCommand(intent: Intent, flags: Int, startId: Int): Int {
+    override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        DebugLog.add("StatusService.onStartCommand intent=${intent?.action}")
         return START_STICKY
     }
 
     override fun onDestroy() {
+        DebugLog.add("StatusService.onDestroy")
         serviceScope.cancel()
         super.onDestroy()
     }
@@ -160,7 +164,7 @@ class StatusService: Service() {
     private fun observeHeartbeat() {
         serviceScope.launch {
             while(isActive) {
-                delay(120_000)
+                delay(120_000.milliseconds)
 
                 val newState = if (!isListenerAlive()) ServiceStatus.Dead else serviceHealth.value
                 if (newState != serviceHealth.value) {
@@ -234,4 +238,3 @@ class StatusService: Service() {
         return now - persisted < 30_000
     }
 }
-
