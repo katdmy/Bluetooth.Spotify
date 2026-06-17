@@ -12,8 +12,8 @@ android {
         applicationId = "com.katdmy.android.bluetoothreadermusic"
         minSdkVersion 31
         targetSdkVersion 37
-        versionCode = 17.1
-        versionName = "17.1"
+        versionCode = 17
+        versionName = "17"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
