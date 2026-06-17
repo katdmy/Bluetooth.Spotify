@@ -399,6 +399,15 @@ class NotificationListener : NotificationListenerService() {
             }
         }
         validRandomVoices = safeVoices
+
+        if (validRandomVoices.isNotEmpty()) {
+            val firstVoice = validRandomVoices.random()
+
+            try {
+                tts.voice = firstVoice
+                currentVoiceName = firstVoice.name
+            } catch (_: Exception) {}
+        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -569,6 +578,8 @@ class NotificationListener : NotificationListenerService() {
                 )
                 audioManager.requestAudioFocus(focusRequest)
 
+                delay(200.milliseconds)
+
                 val params = Bundle().apply {
                     putFloat(
                         TextToSpeech.Engine.KEY_PARAM_VOLUME,
@@ -576,7 +587,7 @@ class NotificationListener : NotificationListenerService() {
                     )
                 }
                 val utteranceId = System.nanoTime().toString()
-                val result = try{
+                val result = try {
                     tts.speak(
                         text,
                         TextToSpeech.QUEUE_ADD,
