@@ -94,6 +94,8 @@ class NotificationListener : NotificationListenerService() {
     )
     @Volatile
     private var volumeCached: Float = 1f
+    @Volatile
+    private var firstSpeakAfterInit = true
 
 
 
@@ -317,6 +319,7 @@ class NotificationListener : NotificationListenerService() {
             }
         })
 
+        firstSpeakAfterInit = true
         refreshValidVoices()
     }
 
@@ -564,6 +567,9 @@ class NotificationListener : NotificationListenerService() {
             }
         }
 
+        DebugLog.add("Requested voice = ${nextVoice?.name}")
+        DebugLog.add("Actual voice = ${tts.voice?.name}")
+
         ttsTrySpeak(text, audioFocusMode)
     }
 
@@ -579,6 +585,11 @@ class NotificationListener : NotificationListenerService() {
                 audioManager.requestAudioFocus(focusRequest)
 
                 delay(200.milliseconds)
+
+                if (firstSpeakAfterInit) {
+                    DebugLog.add("FIRST SPEAK voice=${tts.voice?.name}")
+                    firstSpeakAfterInit = false
+                }
 
                 val params = Bundle().apply {
                     putFloat(
