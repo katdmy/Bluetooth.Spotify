@@ -94,8 +94,6 @@ class NotificationListener : NotificationListenerService() {
     )
     @Volatile
     private var volumeCached: Float = 1f
-    @Volatile
-    private var firstSpeakAfterInit = true
 
 
 
@@ -319,7 +317,6 @@ class NotificationListener : NotificationListenerService() {
             }
         })
 
-        firstSpeakAfterInit = true
         refreshValidVoices()
     }
 
@@ -402,15 +399,6 @@ class NotificationListener : NotificationListenerService() {
             }
         }
         validRandomVoices = safeVoices
-
-        if (validRandomVoices.isNotEmpty()) {
-            val firstVoice = validRandomVoices.random()
-
-            try {
-                tts.voice = firstVoice
-                currentVoiceName = firstVoice.name
-            } catch (_: Exception) {}
-        }
     }
 
     override fun onNotificationPosted(sbn: StatusBarNotification) {
@@ -447,8 +435,8 @@ class NotificationListener : NotificationListenerService() {
                     ).toString()
         }
 
-        val title = pSender.ifBlank { aTitle }.toString()
-        val text = pText.ifBlank { aText }.toString()
+        val title = pSender.ifBlank { aTitle?.toString() ?: "" }
+        val text = pText.ifBlank { aText?.toString() ?: "" }
 
         DebugLog.add(
             "pkg=$packageName " +
@@ -457,20 +445,25 @@ class NotificationListener : NotificationListenerService() {
             "text=$text"
         )
 
-        if (!useTTSCached || key == null)
+        if ((title.isBlank() && text.isBlank()) || key == null) {
+            DebugLog.add("Skipping empty notification")
             return
+        }
+
+        if (!useTTSCached)
+            return
+
+        val textToRead = getTextToRead(
+            settingsMapCached[packageName]?.enabledParts ?: globalNotificationParts,
+            getAppName(this, packageName) ?: packageName,
+            title,
+            text
+        )
+        if (textToRead.isBlank()) return
 
         when (ttsModeCached) {
             0 -> {
                 if (packageName != applicationContext.packageName) {
-                    val textToRead = getTextToRead(
-                        globalNotificationParts,
-                        getAppName(this, packageName) ?: packageName,
-                        title,
-                        text
-                    )
-
-                    if (textToRead.isBlank()) return
 
                     val fingerprint = NotificationFingerprint(key, "$title|$text")
                     if (!recent.contains(fingerprint)) {
@@ -486,13 +479,6 @@ class NotificationListener : NotificationListenerService() {
 
             1 -> {
                 if (settingsMapCached.containsKey(packageName)) {
-                    val textToRead = getTextToRead(
-                        settingsMapCached[packageName]?.enabledParts ?: globalNotificationParts,
-                        getAppName(this, packageName) ?: packageName,
-                        title,
-                        text
-                    )
-                    if (textToRead.isBlank()) return
 
                     val fingerprint = NotificationFingerprint(key, "$title|$text")
                     if (!recent.contains(fingerprint)) {
@@ -505,7 +491,7 @@ class NotificationListener : NotificationListenerService() {
                     val audioFocusMode = settingsMapCached[packageName]?.audioFocusMode
 
                     when (packageName) {
-                        "com.whatsapp" -> if (sortKey?.toInt() == 1) {
+                        "com.whatsapp" -> if (sortKey?.toIntOrNull() == 1) {
                             readTTS(textToRead, audioFocusMode)
                         }
                         "com.instagram.android" -> if (key.contains("|direct|"))
@@ -567,9 +553,6 @@ class NotificationListener : NotificationListenerService() {
             }
         }
 
-        DebugLog.add("Requested voice = ${nextVoice?.name}")
-        DebugLog.add("Actual voice = ${tts.voice?.name}")
-
         ttsTrySpeak(text, audioFocusMode)
     }
 
@@ -583,13 +566,6 @@ class NotificationListener : NotificationListenerService() {
                     audioFocusMode ?: globalAudioFocusMode
                 )
                 audioManager.requestAudioFocus(focusRequest)
-
-                delay(200.milliseconds)
-
-                if (firstSpeakAfterInit) {
-                    DebugLog.add("FIRST SPEAK voice=${tts.voice?.name}")
-                    firstSpeakAfterInit = false
-                }
 
                 val params = Bundle().apply {
                     putFloat(
