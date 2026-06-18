@@ -42,16 +42,13 @@ class StatusService: Service() {
     private lateinit var prefs: SharedPreferences
     private var lastSavedHeartbeat = 0L
 
-    @Volatile
-    private var useTTSCached: Boolean = true
-
     companion object {
         val serviceHealth = MutableStateFlow(ServiceStatus.Dead)
     }
 
     override fun onCreate() {
         super.onCreate()
-        DebugLog.add("StatusService.onCreate")
+        //DebugLog.add("StatusService.onCreate")
 
         val useTtsFlow = BTRMDataStore
             .getValueFlow(USE_TTS_SF, this)
@@ -72,8 +69,7 @@ class StatusService: Service() {
                 serviceHealth,
                 useTtsFlow
             ) { health, useTTS ->
-                useTTSCached = useTTS == true
-                buildUiState(health)
+                buildUiState(health, useTTS)
             }
                 .distinctUntilChanged()
                 .collect { uiState ->
@@ -88,19 +84,20 @@ class StatusService: Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        DebugLog.add("StatusService.onStartCommand intent=${intent?.action}")
+        //DebugLog.add("StatusService.onStartCommand intent=${intent?.action}")
         return START_STICKY
     }
 
     override fun onDestroy() {
-        DebugLog.add("StatusService.onDestroy")
+        //DebugLog.add("StatusService.onDestroy")
         serviceScope.cancel()
         super.onDestroy()
     }
 
 
     private fun buildUiState(
-        health: ServiceStatus
+        health: ServiceStatus,
+        useTTS: Boolean
     ): NotificationUiState {
         return when {
             health == ServiceStatus.Dead -> {
@@ -111,7 +108,7 @@ class StatusService: Service() {
                     label = getString(R.string.restartService)
                 )
             }
-            !useTTSCached -> {
+            !useTTS -> {
                 NotificationUiState(
                     title = getText(R.string.notification_title_tts_off),
                     icon = R.drawable.ic_outline_notifications,
@@ -138,7 +135,7 @@ class StatusService: Service() {
 
     private fun startForegroundOnce(): Boolean {
         return try {
-            val initialNotification = buildNotification(buildUiState(ServiceStatus.Disabled))
+            val initialNotification = buildNotification(buildUiState(ServiceStatus.Disabled, false))
             ServiceCompat.startForeground(
                 this@StatusService,  // service
                 FOREGROUND_NOTIFICATION_ID,  // id
