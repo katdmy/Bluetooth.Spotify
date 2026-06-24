@@ -7,11 +7,6 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 
 object Constants {
     /*
-    IGNORE_LACK_OF_PERMISSION - var enabling app start when user reject notifications reading permission
-    */
-    val IGNORE_LACK_OF_PERMISSION = booleanPreferencesKey("IGNORE_LACK_OF_PERMISSION")
-
-    /*
     ONBOARDING_COMPLETE - if false, show onboarding screen
     */
     val ONBOARDING_COMPLETE = booleanPreferencesKey("ONBOARDING_COMPLETE")
