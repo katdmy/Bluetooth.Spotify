@@ -31,7 +31,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import com.katdmy.android.bluetoothreadermusic.R
@@ -43,12 +42,6 @@ import com.katdmy.android.bluetoothreadermusic.data.models.AppVoiceSettings
 import com.katdmy.android.bluetoothreadermusic.services.StatusService
 import com.katdmy.android.bluetoothreadermusic.ui.vm.MainViewModel
 import com.katdmy.android.bluetoothreadermusic.util.BTConnectionState
-import com.katdmy.android.bluetoothreadermusic.util.BTRMDataStore.getValueFlow
-import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
-import com.katdmy.android.bluetoothreadermusic.util.Constants.SHOW_LOG
-import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
-import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
-import com.katdmy.android.bluetoothreadermusic.util.Constants.USE_TTS_SF
 import com.katdmy.android.bluetoothreadermusic.util.DebugLog
 import kotlinx.coroutines.launch
 
@@ -80,17 +73,10 @@ fun BTReaderApp(
 ) {
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
-    val state = viewModel.uiState.collectAsState()
-    val isReadingTestText = viewModel.isReadingTestText.collectAsState()
+    val uiState = viewModel.uiState.collectAsState()
     val permissions = viewModel.permissionState.collectAsState()
-    val context = LocalContext.current
     var navigation: Navigation by remember { mutableStateOf(Navigation.Main) }
     var testTextToSpeech by remember { mutableStateOf("") }
-    val useTTS by getValueFlow(USE_TTS_SF, context).collectAsState(initial = false)
-    val ttsModeSelection by getValueFlow(TTS_MODE, context).collectAsState(initial = 0)
-    val randomVoice by getValueFlow(RANDOM_VOICE, context).collectAsState(initial = false)
-    val ttsVolume by getValueFlow(TTS_VOLUME, context).collectAsState(initial = 1f)
-    val showLog by getValueFlow(SHOW_LOG, context).collectAsState(initial = false)
     val messages by DebugLog.messages.collectAsState()
     val btState by BTConnectionState.state.collectAsState()
 
@@ -179,21 +165,11 @@ fun BTReaderApp(
                 Navigation.SettingsScreen -> {
                     SettingsScreen(
                         serviceHealth = serviceHealth,
-                        ttsModeSelection = ttsModeSelection,
-                        installedApps = state.value.installedApps,
-                        addedApps = state.value.addedApps,
-                        allAppSettings = state.value.allAppSettings.associateBy { app -> app.packageName },
-                        randomVoice = randomVoice,
-                        ttsVolume = ttsVolume,
-                        voicesCount = state.value.voicesCount,
+                        uiState = uiState.value,
                         postNotificationPermissionGranted = permissions.value.postNotification,
                         readNotificationsPermissionGranted = permissions.value.readNotifications,
-                        audioFocusMode = state.value.globalAudioFocusMode,
-                        enabledParts = state.value.globalNotificationParts,
-                        readUpdates = state.value.readUpdates,
                         btStatusPermissionGranted = permissions.value.btStatus,
                         btStatus = btState,
-                        showLog = showLog == true,
                         onGetInstalledLaunchableApps = onGetInstalledLaunchableApps,
                         onSetTtsMode = onSetTtsMode,
                         onClickSaveAppSettings = onClickSaveAppSettings,
@@ -222,10 +198,8 @@ fun BTReaderApp(
                     val enablePermission = stringResource(R.string.enable_permission)
                     MainScreen(
                         testTextToSpeech = testTextToSpeech,
-                        isReadingTestText = isReadingTestText.value,
-                        showLog = showLog == true,
+                        uiState = uiState.value,
                         messages = messages,
-                        useTTS = useTTS == true,
                         onTestTextToSpeechChange = { newText -> testTextToSpeech = newText },
                         onClickReadTestText = onClickReadTestText,
                         onClickStopReading = onClickStopReading,

@@ -273,6 +273,26 @@ class ComposeActivity : ComponentActivity() {
                 BTRMDataStore.getValueFlow(READ_UPDATES, this@ComposeActivity)
                     .collect { viewModel.onSetReadUpdates(it ?: true) }
             }
+            launch {
+                BTRMDataStore.getValueFlow(USE_TTS_SF, this@ComposeActivity)
+                    .collect { viewModel.onSetUseTTS(it ?: false) }
+            }
+            launch {
+                BTRMDataStore.getValueFlow(TTS_MODE, this@ComposeActivity)
+                    .collect { viewModel.onSeTtsModeSelection(it ?: 0) }
+            }
+            launch {
+                BTRMDataStore.getValueFlow(RANDOM_VOICE, this@ComposeActivity)
+                    .collect { viewModel.onSetRandomVoice(it ?: false) }
+            }
+            launch {
+                BTRMDataStore.getValueFlow(TTS_VOLUME, this@ComposeActivity)
+                    .collect { viewModel.onSetTtsVolume(it ?: 1f) }
+            }
+            launch {
+                BTRMDataStore.getValueFlow(SHOW_LOG, this@ComposeActivity)
+                    .collect { viewModel.onSetShowLog(it ?: false) }
+            }
         }
     }
 

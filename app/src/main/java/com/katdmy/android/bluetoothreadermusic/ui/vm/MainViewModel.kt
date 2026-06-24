@@ -16,9 +16,6 @@ class MainViewModel : ViewModel() {
     private val _uiState = MutableStateFlow(MainUiModel())
     val uiState: StateFlow<MainUiModel> = _uiState.asStateFlow()
 
-    private val _isReadingTestText = MutableStateFlow(false)
-    val isReadingTestText: StateFlow<Boolean> = _isReadingTestText.asStateFlow()
-
     private val _permissionState = MutableStateFlow(GrantedPermissions())
     val permissionState: StateFlow<GrantedPermissions> = _permissionState.asStateFlow()
 
@@ -43,7 +40,7 @@ class MainViewModel : ViewModel() {
     }
 
     fun onSetReadingTestText(newReadingTestText: Boolean) {
-        _isReadingTestText.tryEmit(newReadingTestText)
+        _uiState.update { it.copy(isReadingTestText = newReadingTestText) }
     }
 
     fun onSetPostNotificationPermission(newPostNotificationPermission: Boolean) {
@@ -68,5 +65,25 @@ class MainViewModel : ViewModel() {
 
     fun onSetReadUpdates(newReadUpdates: Boolean) {
         _uiState.update { it.copy(readUpdates = newReadUpdates) }
+    }
+
+    fun onSetUseTTS(newUseTTS: Boolean) {
+        _uiState.update { it.copy(useTTS = newUseTTS) }
+    }
+
+    fun onSeTtsModeSelection(newTtsModeSelection: Int) {
+        _uiState.update { it.copy(ttsModeSelection = newTtsModeSelection) }
+    }
+
+    fun onSetRandomVoice(newRandomVoice: Boolean) {
+        _uiState.update { it.copy(randomVoice = newRandomVoice) }
+    }
+
+    fun onSetTtsVolume(newTtsVolume: Float) {
+        _uiState.update { it.copy(ttsVolume = newTtsVolume) }
+    }
+
+    fun onSetShowLog(newShowLog: Boolean) {
+        _uiState.update { it.copy(showLog = newShowLog) }
     }
 }

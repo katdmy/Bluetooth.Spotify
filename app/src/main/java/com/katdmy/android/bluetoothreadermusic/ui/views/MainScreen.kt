@@ -31,16 +31,15 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import com.katdmy.android.bluetoothreadermusic.R
+import com.katdmy.android.bluetoothreadermusic.data.models.MainUiModel
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.BtReaderButton
 
 @Composable
 fun MainScreen(
     testTextToSpeech: String,
-    isReadingTestText: Boolean,
-    showLog: Boolean,
+    uiState: MainUiModel,
     messages: List<String>,
-    useTTS: Boolean,
     onTestTextToSpeechChange: (String) -> Unit,
     onClickReadTestText: (String) -> Unit,
     onClickStopReading: () -> Unit,
@@ -91,7 +90,7 @@ fun MainScreen(
                         },
                         modifier = Modifier.fillMaxWidth()
                     )
-                    if (isReadingTestText)
+                    if (uiState.isReadingTestText)
                     // Кнопка остановки чтения текста
                         BtReaderButton(
                             text = stringResource(R.string.tts_stop),
@@ -114,7 +113,7 @@ fun MainScreen(
                 }
             }
 
-            if (showLog)
+            if (uiState.showLog)
                 Card(
                     modifier = modifier.weight(1f),
                     elevation = CardDefaults.elevatedCardElevation(4.dp),
@@ -165,7 +164,7 @@ fun MainScreen(
                         modifier = Modifier.padding(end = 12.dp)
                     )
                     Switch(
-                        checked = useTTS,
+                        checked = uiState.useTTS,
                         onCheckedChange = onChangeUseTTS
                     )
                 }
@@ -180,8 +179,9 @@ fun MainScreenPreview() {
     BtReaderMusicTheme {
         MainScreen(
             testTextToSpeech = "",
-            isReadingTestText = false,
-            showLog = true,
+            uiState = MainUiModel(
+                showLog = true,
+            ),
             messages = listOf(
                 "[12:41:02] BootReceiver triggered",
                 "[12:41:15] Worker started",
@@ -195,7 +195,6 @@ fun MainScreenPreview() {
             onClickStopReading = {},
             onClearLog = {},
             onChangeUseTTS = {},
-            useTTS = false,
         )
     }
 }
@@ -206,22 +205,13 @@ fun MainScreenPreviewInRussian() {
     BtReaderMusicTheme {
         MainScreen(
             testTextToSpeech = "",
-            isReadingTestText = false,
-            showLog = false,
-            messages = listOf(
-                "[12:41:02] BootReceiver triggered",
-                "[12:41:15] Worker started",
-                "[12:41:22] Bluetooth disconnected",
-                "[12:41:33] Bluetooth connected",
-                "[12:41:35] TTS initialized",
-                "[12:41:40] Voice selected: ko-KR-voice-3"
-            ),
+            uiState = MainUiModel(),
+            messages = emptyList(),
             onTestTextToSpeechChange = {},
             onClickReadTestText = {},
             onClickStopReading = {},
             onClearLog = {},
             onChangeUseTTS = {},
-            useTTS = false,
         )
     }
 }

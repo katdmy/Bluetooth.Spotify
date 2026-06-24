@@ -43,6 +43,7 @@ import com.katdmy.android.bluetoothreadermusic.data.enums.AudioFocusMode
 import com.katdmy.android.bluetoothreadermusic.data.enums.NotificationPart
 import com.katdmy.android.bluetoothreadermusic.data.models.AppVoiceSettings
 import com.katdmy.android.bluetoothreadermusic.data.models.InstalledApp
+import com.katdmy.android.bluetoothreadermusic.data.models.MainUiModel
 import com.katdmy.android.bluetoothreadermusic.ui.theme.BtReaderMusicTheme
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.AppChooseDialog
 import com.katdmy.android.bluetoothreadermusic.ui.views.helper.BtReaderButton
@@ -57,21 +58,11 @@ import kotlinx.coroutines.launch
 @Composable
 fun SettingsScreen(
     serviceHealth: ServiceStatus,
-    ttsModeSelection: Int?,
-    installedApps: List<InstalledApp>,
-    addedApps: List<InstalledApp>,
-    allAppSettings: Map<String, AppVoiceSettings>,
-    randomVoice: Boolean?,
-    ttsVolume: Float?,
-    voicesCount: Int,
+    uiState: MainUiModel,
     postNotificationPermissionGranted: Boolean,
     readNotificationsPermissionGranted: Boolean,
-    audioFocusMode: AudioFocusMode,
-    enabledParts: Set<NotificationPart>,
-    readUpdates: Boolean,
     btStatusPermissionGranted: Boolean,
     btStatus: String,
-    showLog: Boolean,
     onGetInstalledLaunchableApps: () -> Unit,
     onSetTtsMode: (Int) -> Unit,
     onClickSaveAppSettings: (AppVoiceSettings) -> Unit,
@@ -227,7 +218,7 @@ fun SettingsScreen(
                                 count = options.size
                             ),
                             onClick = { onSetTtsMode(index) },
-                            selected = index == ttsModeSelection,
+                            selected = index == uiState.ttsModeSelection,
                             modifier = Modifier.weight(1f)
                         ) {
                             Text(label, maxLines = 1)
@@ -235,11 +226,13 @@ fun SettingsScreen(
                     }
                 }
 
-                if (addedApps.count() > 0) {
+                if (uiState.addedApps.count() > 0) {
                     AddedAppColumn(
-                        addedApps = addedApps,
-                        allAppSettings = allAppSettings,
-                        enabled = ttsModeSelection == 1,
+                        addedApps = uiState.addedApps,
+                        allAppSettings = uiState.allAppSettings.associateBy {
+                            app -> app.packageName
+                        },
+                        enabled = uiState.ttsModeSelection == 1,
                         onClickOpenAppSettings = { packageName ->
                             appToOpenSettings = packageName
                         },
@@ -287,11 +280,11 @@ fun SettingsScreen(
                         modifier = Modifier.padding(end = 12.dp)
                     )
                     Switch(
-                        checked = randomVoice == true,
+                        checked = uiState.randomVoice,
                         onCheckedChange = onSetRandomVoice
                     )
                 }
-                if (voicesCount <= 1) {
+                if (uiState.voicesCount <= 1) {
                     Text(
                         text = stringResource(R.string.lack_available_voices),
                         style = MaterialTheme.typography.bodyMedium,
@@ -328,7 +321,7 @@ fun SettingsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Slider(
-                        value = ttsVolume ?: 1f,
+                        value = uiState.ttsVolume,
                         onValueChange = onSetTtsVolume,
                         valueRange = 0.01f..1f,
                         steps = 19,
@@ -336,7 +329,7 @@ fun SettingsScreen(
                     )
 
                     Text(
-                        text = "%3d%%".format(((ttsVolume ?: 1f) * 100).toInt()),
+                        text = "%3d%%".format((uiState.ttsVolume * 100).toInt()),
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.End,
                         modifier = Modifier.width(48.dp)
@@ -365,7 +358,7 @@ fun SettingsScreen(
                 AudioFocusModeSelector(
                     isGlobal = true,
                     useGlobal = false,
-                    selected = audioFocusMode,
+                    selected = uiState.globalAudioFocusMode,
                     onChangeUseGlobal = {},
                     onSelect = onChangeGlobalAudioFocusMode
                 )
@@ -375,7 +368,7 @@ fun SettingsScreen(
                 NotificationPartsSelector(
                     isGlobal = true,
                     useGlobal = false,
-                    selectedParts = enabledParts,
+                    selectedParts = uiState.globalNotificationParts,
                     appName = "Test App",
                     onChangeUseGlobal = {},
                     onChange = onChangeGlobalNotificationParts
@@ -395,7 +388,7 @@ fun SettingsScreen(
                             .padding(end = 12.dp)
                     )
                     Switch(
-                        checked = readUpdates,
+                        checked = uiState.readUpdates,
                         onCheckedChange = onSetReadUpdates
                     )
                 }
@@ -453,7 +446,7 @@ fun SettingsScreen(
                         modifier = Modifier.padding(end = 12.dp)
                     )
                     Switch(
-                        checked = showLog,
+                        checked = uiState.showLog,
                         onCheckedChange = onChangeShowLog
                     )
                 }
@@ -495,8 +488,8 @@ fun SettingsScreen(
 
     if (openAppChooseDialog) {
         AppChooseDialog(
-            installedApps = installedApps,
-            alreadyAdded = addedApps.map { it.packageName },
+            installedApps = uiState.installedApps,
+            alreadyAdded = uiState.addedApps.map { it.packageName },
             onClickAdd = onClickAddApp,
             onDismiss = { openAppChooseDialog = false }
         )
@@ -516,8 +509,9 @@ fun SettingsScreen(
     }
     if (appToOpenSettings != null) {
         val onCloseAppSettings = { closeAppSettings = true }
-        val settings = allAppSettings[appToOpenSettings]
-            ?: AppVoiceSettings(packageName = appToOpenSettings!!)
+        val settings = uiState.allAppSettings
+            .associateBy { app -> app.packageName }[appToOpenSettings]
+                ?: AppVoiceSettings(packageName = appToOpenSettings!!)
 
         AppVoiceSettingsBottomSheet(
             settings = settings,
@@ -534,24 +528,16 @@ fun SettingsScreenPreview() {
     BtReaderMusicTheme {
         SettingsScreen(
             serviceHealth = ServiceStatus.Disabled,
-            ttsModeSelection = 1,
-            installedApps = emptyList(),
-            addedApps = listOf(
-                InstalledApp("org.whatsapp", "Whatsapp", null),
-                InstalledApp("org.telegram.messenger", "Telegram", null),
+            uiState = MainUiModel(
+                addedApps = listOf(
+                    InstalledApp("org.whatsapp", "Whatsapp", null),
+                    InstalledApp("org.telegram.messenger", "Telegram", null),
+                ),
             ),
-            allAppSettings = emptyMap(),
-            randomVoice = false,
-            ttsVolume = 0.8f,
-            voicesCount = 1,
             postNotificationPermissionGranted = false,
             readNotificationsPermissionGranted = false,
-            audioFocusMode = AudioFocusMode.DUCK,
-            enabledParts = setOf(NotificationPart.TITLE, NotificationPart.TEXT),
-            readUpdates = true,
             btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
-            showLog = false,
             onGetInstalledLaunchableApps = {},
             onSetTtsMode = {},
             onClickSaveAppSettings = {},
@@ -580,19 +566,16 @@ fun SettingsScreenPreviewInRussian() {
     BtReaderMusicTheme {
         SettingsScreen(
             serviceHealth = ServiceStatus.Disabled,
-            ttsModeSelection = 1,
-            installedApps = emptyList(),
-            addedApps = listOf(
-                InstalledApp("org.whatsapp", "Whatsapp", null),
-                InstalledApp("org.telegram.messenger", "Telegram", null),
+            uiState = MainUiModel(
+                addedApps = listOf(
+                    InstalledApp("org.whatsapp", "Whatsapp", null),
+                    InstalledApp("org.telegram.messenger", "Telegram", null),
+                ),
+                voicesCount = 2,
+                ttsVolume = 0.8f,
             ),
-            allAppSettings = emptyMap(),
-            randomVoice = false,
-            ttsVolume = 0.8f,
-            voicesCount = 2,
             btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
-            showLog = false,
             onGetInstalledLaunchableApps = {},
             onSetTtsMode = {},
             onClickSaveAppSettings = {},
@@ -600,9 +583,6 @@ fun SettingsScreenPreviewInRussian() {
             onClickAddApp = {},
             postNotificationPermissionGranted = false,
             readNotificationsPermissionGranted = false,
-            audioFocusMode = AudioFocusMode.DUCK,
-            enabledParts = setOf(NotificationPart.TITLE, NotificationPart.TEXT),
-            readUpdates = true,
             onSetRandomVoice = {},
             onSetTtsVolume = {},
             onClickOpenTTSSettings = {},
