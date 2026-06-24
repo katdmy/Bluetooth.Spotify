@@ -450,6 +450,9 @@ class NotificationListener : NotificationListenerService() {
         val title = pSender.ifBlank { aTitle?.toString() ?: "" }
         val text = pText.ifBlank { aText?.toString() ?: "" }
 
+        // TODO("Remove after tests")
+        if (packageName == "org.amnezia.vpn") return
+
         DebugLog.add(
             "pkg=$packageName " +
             "key=$key " +
