@@ -37,6 +37,7 @@ import com.katdmy.android.bluetoothreadermusic.util.BTConnectionState
 import com.katdmy.android.bluetoothreadermusic.util.Constants.APP_VOICE_SETTINGS
 import com.katdmy.android.bluetoothreadermusic.util.Constants.GLOBAL_AUDIOFOCUS_MODE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.GLOBAL_NOTIFICATION_PARTS
+import com.katdmy.android.bluetoothreadermusic.util.Constants.READ_UPDATES
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
 import com.katdmy.android.bluetoothreadermusic.util.DebugLog
 import com.katdmy.android.bluetoothreadermusic.util.PackageHelper.getAppName
@@ -86,14 +87,16 @@ class NotificationListener : NotificationListenerService() {
     @Volatile
     private var settingsMapCached: Map<String, AppVoiceSettings> = emptyMap()
     @Volatile
-    private var globalAudioFocusMode: AudioFocusMode = AudioFocusMode.DUCK
+    private var globalAudioFocusModeCached: AudioFocusMode = AudioFocusMode.DUCK
     @Volatile
-    private var globalNotificationParts: Set<NotificationPart> = setOf(
+    private var globalNotificationPartsCached: Set<NotificationPart> = setOf(
         NotificationPart.TITLE,
         NotificationPart.TEXT
     )
     @Volatile
     private var volumeCached: Float = 1f
+    @Volatile
+    private var readUpdatesCached: Boolean = true
 
 
 
@@ -214,7 +217,7 @@ class NotificationListener : NotificationListenerService() {
                             null
                         } ?: AudioFocusMode.DUCK
                     }
-                    .collect { globalAudioFocusMode = it }
+                    .collect { globalAudioFocusModeCached = it }
             }
             launch {
                 BTRMDataStore.getValueFlow(
@@ -233,7 +236,16 @@ class NotificationListener : NotificationListenerService() {
                             NotificationPart.TEXT
                         )
                     }
-                    .collect { globalNotificationParts = it }
+                    .collect { globalNotificationPartsCached = it }
+            }
+            launch {
+                BTRMDataStore.getValueFlow(READ_UPDATES, this@NotificationListener)
+                    .collect {
+                        if (readUpdatesCached != (it ?: true)) {
+                            readUpdatesCached = it ?: true
+                            recent.clear()
+                        }
+                    }
             }
         }
 
@@ -454,7 +466,7 @@ class NotificationListener : NotificationListenerService() {
             return
 
         val textToRead = getTextToRead(
-            settingsMapCached[packageName]?.enabledParts ?: globalNotificationParts,
+            settingsMapCached[packageName]?.enabledParts ?: globalNotificationPartsCached,
             getAppName(this, packageName) ?: packageName,
             title,
             text
@@ -465,25 +477,31 @@ class NotificationListener : NotificationListenerService() {
             0 -> {
                 if (packageName != applicationContext.packageName) {
 
-                    val fingerprint = NotificationFingerprint(key, "$title|$text")
+                    val fingerprint = if (readUpdatesCached)
+                        NotificationFingerprint(key, "$title|$text")
+                    else
+                        NotificationFingerprint(key, "")
                     if (!recent.contains(fingerprint)) {
                         recent.add(fingerprint)
-                        if (recent.size > 50) {
+                        if (recent.size > 100) {
                             recent.remove(recent.first())
                         }
                     } else return
 
-                    readTTS(textToRead, globalAudioFocusMode)
+                    readTTS(textToRead, globalAudioFocusModeCached)
                 }
             }
 
             1 -> {
                 if (settingsMapCached.containsKey(packageName)) {
 
-                    val fingerprint = NotificationFingerprint(key, "$title|$text")
+                    val fingerprint = if (readUpdatesCached)
+                        NotificationFingerprint(key, "$title|$text")
+                    else
+                        NotificationFingerprint(key, "")
                     if (!recent.contains(fingerprint)) {
                         recent.add(fingerprint)
-                        if (recent.size > 50) {
+                        if (recent.size > 100) {
                             recent.remove(recent.first())
                         }
                     } else return
@@ -563,7 +581,7 @@ class NotificationListener : NotificationListenerService() {
                     return@withLock
 
                 val focusRequest = getFocusRequest(
-                    audioFocusMode ?: globalAudioFocusMode
+                    audioFocusMode ?: globalAudioFocusModeCached
                 )
                 audioManager.requestAudioFocus(focusRequest)
 

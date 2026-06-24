@@ -53,6 +53,7 @@
 
     <string name="add_installed_app">Add</string>
     <string name="service_header">Notification Listener Service</string>
+    <string name="read_updates_header">Read Notification Updates</string>
     <string name="bt_status">BT status</string>
     <string name="log_messages">Log messages</string>
     <string name="log_messages_clear">Clear Messages</string>

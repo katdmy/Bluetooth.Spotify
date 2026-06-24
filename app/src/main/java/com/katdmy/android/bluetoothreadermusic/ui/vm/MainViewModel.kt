@@ -65,4 +65,8 @@ class MainViewModel : ViewModel() {
     fun onSetAllAppSettings(newSettings: List<AppVoiceSettings>) {
         _uiState.update { it.copy(allAppSettings = newSettings) }
     }
+
+    fun onSetReadUpdates(newReadUpdates: Boolean) {
+        _uiState.update { it.copy(readUpdates = newReadUpdates) }
+    }
 }

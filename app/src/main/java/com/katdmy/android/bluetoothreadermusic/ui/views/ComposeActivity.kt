@@ -44,6 +44,7 @@ import com.katdmy.android.bluetoothreadermusic.util.Constants.GLOBAL_NOTIFICATIO
 import com.katdmy.android.bluetoothreadermusic.util.StringListHelper.getList
 import com.katdmy.android.bluetoothreadermusic.util.Constants.ONBOARDING_COMPLETE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.RANDOM_VOICE
+import com.katdmy.android.bluetoothreadermusic.util.Constants.READ_UPDATES
 import com.katdmy.android.bluetoothreadermusic.util.Constants.SHOW_LOG
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_MODE
 import com.katdmy.android.bluetoothreadermusic.util.Constants.TTS_VOLUME
@@ -122,6 +123,7 @@ class ComposeActivity : ComponentActivity() {
                             onSetTtsVolume = ::onSetTtsVolume,
                             onClickRequestReadNotificationsPermission = ::onRequestReadNotificationsPermission,
                             onClickRequestPostNotificationPermission = ::onRequestShowNotificationPermission,
+                            onSetReadUpdates = ::onSetReadUpdates,
                             onClickRequestBtPermission = ::onRequestBtPermission,
                             onChangeShowLog = ::onChangeShowLog,
                             onClickForceRestartTTS = ::onClickForceRestartTTS,
@@ -266,6 +268,10 @@ class ComposeActivity : ComponentActivity() {
                         } ?: emptyList()
                     }
                     .collect(viewModel::onSetAllAppSettings)
+            }
+            launch {
+                BTRMDataStore.getValueFlow(READ_UPDATES, this@ComposeActivity)
+                    .collect { viewModel.onSetReadUpdates(it ?: true) }
             }
         }
     }
@@ -569,6 +575,12 @@ class ComposeActivity : ComponentActivity() {
     private fun onRequestShowNotificationPermission() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             requestPermissionLauncher.launch(arrayOf(Manifest.permission.POST_NOTIFICATIONS))
+        }
+    }
+
+    private fun onSetReadUpdates(newReadUpdates: Boolean) {
+        lifecycleScope.launch {
+            BTRMDataStore.saveValue(newReadUpdates, READ_UPDATES, this@ComposeActivity)
         }
     }
 

@@ -68,6 +68,7 @@ fun SettingsScreen(
     readNotificationsPermissionGranted: Boolean,
     audioFocusMode: AudioFocusMode,
     enabledParts: Set<NotificationPart>,
+    readUpdates: Boolean,
     btStatusPermissionGranted: Boolean,
     btStatus: String,
     showLog: Boolean,
@@ -83,6 +84,7 @@ fun SettingsScreen(
     onClickRequestPostNotificationPermission: () -> Unit,
     onChangeGlobalAudioFocusMode: (AudioFocusMode) -> Unit,
     onChangeGlobalNotificationParts: (Set<NotificationPart>) -> Unit,
+    onSetReadUpdates: (Boolean) -> Unit,
     onClickRequestBtPermission: () -> Unit,
     onClickOpenTTSSettings: () -> Unit,
     onChangeShowLog: (Boolean) -> Unit,
@@ -378,6 +380,25 @@ fun SettingsScreen(
                     onChangeUseGlobal = {},
                     onChange = onChangeGlobalNotificationParts
                 )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = stringResource(R.string.read_updates_header),
+                        style = MaterialTheme.typography.titleMedium,
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 12.dp)
+                    )
+                    Switch(
+                        checked = readUpdates,
+                        onCheckedChange = onSetReadUpdates
+                    )
+                }
             }
         }
 
@@ -507,7 +528,7 @@ fun SettingsScreen(
     }
 }
 
-@Preview(showBackground = true)
+@Preview(showBackground = true, heightDp = 1700)
 @Composable
 fun SettingsScreenPreview() {
     BtReaderMusicTheme {
@@ -527,6 +548,7 @@ fun SettingsScreenPreview() {
             readNotificationsPermissionGranted = false,
             audioFocusMode = AudioFocusMode.DUCK,
             enabledParts = setOf(NotificationPart.TITLE, NotificationPart.TEXT),
+            readUpdates = true,
             btStatusPermissionGranted = true,
             btStatus = "CONNECTED",
             showLog = false,
@@ -543,6 +565,7 @@ fun SettingsScreenPreview() {
             onClickRequestPostNotificationPermission = {},
             onChangeGlobalAudioFocusMode = {},
             onChangeGlobalNotificationParts = {},
+            onSetReadUpdates = {},
             onClickRequestBtPermission = {},
             onChangeShowLog = {},
             onClickForceRestartTTS = {},
@@ -551,7 +574,7 @@ fun SettingsScreenPreview() {
     }
 }
 
-@Preview(showBackground = true, locale = "ru")
+@Preview(showBackground = true, locale = "ru", heightDp = 1700)
 @Composable
 fun SettingsScreenPreviewInRussian() {
     BtReaderMusicTheme {
@@ -579,6 +602,7 @@ fun SettingsScreenPreviewInRussian() {
             readNotificationsPermissionGranted = false,
             audioFocusMode = AudioFocusMode.DUCK,
             enabledParts = setOf(NotificationPart.TITLE, NotificationPart.TEXT),
+            readUpdates = true,
             onSetRandomVoice = {},
             onSetTtsVolume = {},
             onClickOpenTTSSettings = {},
@@ -587,6 +611,7 @@ fun SettingsScreenPreviewInRussian() {
             onClickRequestPostNotificationPermission = {},
             onChangeGlobalAudioFocusMode = {},
             onChangeGlobalNotificationParts = {},
+            onSetReadUpdates = {},
             onClickRequestBtPermission = {},
             onChangeShowLog = {},
             onClickForceRestartTTS = {},

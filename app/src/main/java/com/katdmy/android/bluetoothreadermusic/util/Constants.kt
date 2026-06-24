@@ -67,4 +67,9 @@ object Constants {
     GLOBAL_NOTIFICATION_PARTS - stores serializable value of added app voice settings
     */
     val GLOBAL_NOTIFICATION_PARTS = stringPreferencesKey("GLOBAL_NOTIFICATION_PARTS")
+
+    /*
+    READ_UPDATES - should service read notification updates or only new notifications
+    */
+    val READ_UPDATES = booleanPreferencesKey("READ_UPDATES")
 }

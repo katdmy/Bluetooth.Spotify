@@ -54,6 +54,7 @@
 
     <string name="add_installed_app">Добавить</string>
     <string name="service_header">Чтение уведомлений</string>
+    <string name="read_updates_header">Озвучивать изменения уведомлений</string>
     <string name="bt_status">Статус BT</string>
     <string name="log_messages">Служебные сообщения</string>
     <string name="log_messages_clear">Очистить</string>
